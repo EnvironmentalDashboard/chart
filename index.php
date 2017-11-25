@@ -152,6 +152,7 @@ var charachter_width = svg_width/6,
     charachter = document.getElementById('charachter');
 charachter.setAttribute('x', svg_width - charachter_width);
 charachter.setAttribute('width', charachter_width);
+charachter.setAttribute('height', '100%');
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var svg = d3.select('#svg'),
     margin = {top: 0, right: charachter_width, bottom: 20, left: 40},
@@ -167,6 +168,12 @@ var lineGenerator = d3.line()
   .x(function(d, i) { return xScale(times[i]); }) // x coord
   .y(yScale) // y coord
   .curve(d3.curveCatmullRom); // smoothing
+var areaGenerator = d3.area()
+  .defined(function(d) { return d !== null; }) // points are only defined if they are not null
+  .x(function(d, i) { return xScale(times[i]); }) // x coord
+  .y1(yScale) // y coord
+  .y0(yScale(0))
+  .curve(d3.curveCatmullRom); // smoothing
 var current_path = null;
 values.forEach(function(curve, i) {
   // draw curve for each array in values
@@ -179,6 +186,11 @@ values.forEach(function(curve, i) {
     .attr("stroke-linejoin", "round")
     .attr("stroke-linecap", "round")
     .attr("stroke-width", 2);
+  g.append("path")
+    .datum(curve)
+    .attr("fill", color(i))
+    .attr("opacity", "0.1")
+    .attr("d", areaGenerator);
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(10, '<?php echo $xaxis_format ?>');
