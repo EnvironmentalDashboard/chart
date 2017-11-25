@@ -3,7 +3,7 @@
  * Input: array of arrays that each have a 'value' and 'recorded' key
  * Output: the value in $arr recorded on $sec. if no value exists, give best approximation
  */
-function find_nearest($arr, $sec, $null = false) { 
+function find_nearest($arr, $sec, $null = true) { 
   static $i = 0;
   $count = count($arr);
   while ($i < $count) {

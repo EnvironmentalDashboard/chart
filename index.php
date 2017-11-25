@@ -5,6 +5,7 @@ date_default_timezone_set('America/New_York');
 require_once '../includes/db.php';
 require_once '../includes/class.Meter.php';
 require_once 'includes/find_nearest.php';
+$null_data = true;
 $charts = 0;
 $colors = ['#00a185', '#bdc3c7', '#33a7ff'];
 $_GET['meter0'] = 415;
@@ -29,7 +30,7 @@ for ($i = 0; $i < $charts; $i++) {
 $title_img = true;//false;
 $title_txt = true;//false;
 $start = 0;
-$time_frame = 'hour';
+$time_frame = 'week';
 foreach ($_GET as $key => $value) {
   $$key = $value; // replaced expected GET parameters with their actual value if they're present
 }
@@ -68,18 +69,18 @@ for ($i = 0; $i < $charts; $i++) {
   if ($$var_name === false) {
     continue;
   }
-  $data = $meter->getDataFromTo($$var_name, $from, $to, $res, true);
+  $data = $meter->getDataFromTo($$var_name, $from, $to, $res, $null_data);
   if (empty($data)) {
     $$var_name = false;
     continue;
   }
   foreach ($times as $time) {
-    $best_guess = find_nearest($data, $time);
+    $best_guess = find_nearest($data, $time, $null_data);
     $values[$i][] = $best_guess;
-    if ($best_guess > $max) {
+    if ($best_guess !== null && $best_guess > $max) {
       $max = $best_guess;
     }
-    if ($best_guess < $min) {
+    if ($best_guess !== null && $best_guess < $min) {
       $min = $best_guess;
     }
   }
@@ -93,13 +94,20 @@ for ($i = 0; $i < $charts; $i++) {
   <link rel="stylesheet" href="style.css">
   <title>Time Series</title>
   <style>
+  svg {
+    outline: 1px solid red;
+    margin-left: 25px;
+  }
+  .Grid {
+    margin-left: 25px;
+  }
   </style>
 </head>
 <body><?php
 if ($title_img || $title_txt) {
   echo '<div class="Grid Grid--gutters Grid--center">';
   if ($title_img) {
-    echo "<div class='Grid-cell' style='flex: 0 0 8%;'><img src='https://placehold.it/150x150' /></div>";
+    echo "<div class='Grid-cell' style='flex: 0 0 8%;padding-left:0px;'><img src='https://placehold.it/150x150' /></div>";
   }
   if ($title_txt) {
     echo "<div class='Grid-cell'><h1 style='display:inline'>Meter name</h1></div>";
@@ -113,16 +121,16 @@ if ($title_img || $title_txt) {
 'use strict';
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
-var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
+var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
     svg_height = 500;
 var svg = d3.select('#svg'),
-    margin = {top: 20, right: 20, bottom: 30, left: 50},
+    margin = {top: 20, right: 200, bottom: 30, left: 50},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
-var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]);
+var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; })
   .x(function(d, i) { return xScale(times[i]); })
@@ -136,7 +144,11 @@ values.forEach(function(curve, i) {
       .attr("stroke-linecap", "round")
       .attr("stroke-width", 1.5);
 });
-
+svg.append("g")
+  .attr("transform", "translate(0," + chart_height + ")")
+  .call(d3.axisBottom(xScale))
+svg.append("g")
+  .call(d3.axisLeft(y));
 </script>
 </body>
 </html>
