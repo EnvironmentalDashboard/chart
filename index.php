@@ -29,7 +29,7 @@ for ($i = 0; $i < $charts; $i++) {
 $title_img = true;//false;
 $title_txt = true;//false;
 $start = 0;
-$time_frame = 'day';
+$time_frame = 'hour';
 foreach ($_GET as $key => $value) {
   $$key = $value; // replaced expected GET parameters with their actual value if they're present
 }
@@ -68,7 +68,7 @@ for ($i = 0; $i < $charts; $i++) {
   if ($$var_name === false) {
     continue;
   }
-  $data = $meter->getDataFromTo($$var_name, $from, $to, $res, false);
+  $data = $meter->getDataFromTo($$var_name, $from, $to, $res, true);
   if (empty($data)) {
     $$var_name = false;
     continue;
@@ -84,8 +84,6 @@ for ($i = 0; $i < $charts; $i++) {
     }
   }
 }
-// https://codepen.io/beacrea/pen/reywxz?q=d3%20line%20graph&order=popularity&depth=everything&show_forks=false
-// http://bl.ocks.org/cgroll/c5e7bdb5dffb12818623
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,46 +93,6 @@ for ($i = 0; $i < $charts; $i++) {
   <link rel="stylesheet" href="style.css">
   <title>Time Series</title>
   <style>
-#svg-container {
-  box-shadow: 0 0 0 1px #eee;
-  box-sizing: border-box;
-}
-
-path,
-line {
-  fill: none;
-  shape-rendering: crispEdges;
-  stroke: #E8E8E8;
-}
-
-.path-line {
-  shape-rendering: initial;
-}
-.path-line.path-line1 {
-  stroke: #0baadd;
-}
-.path-line.path-line2 {
-  stroke: #47cf73;
-}
-
-.path-area {
-  stroke: none;
-}
-.path-area.path-area1 {
-  fill: rgba(11, 170, 221, 0.7);
-  stroke: rgba(11, 170, 221, 0.7);
-}
-.path-area.path-area2 {
-  fill: rgba(71, 207, 115, 0.55);
-  stroke: rgba(71, 207, 115, 0.55);
-}
-
-.tick text {
-  font-family: 'Roboto', sans-serif;
-  font-size: 10px;
-  fill: #999;
-}
-
   </style>
 </head>
 <body><?php
@@ -149,125 +107,36 @@ if ($title_img || $title_txt) {
   echo '</div>';
 }
 ?>
-<div id="svg-container" style="width:100%">
-  <svg id="svg"></svg>
-</div>
-<script src="https://d3js.org/d3.v4.min.js"></script>
+<svg id="svg"></svg>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
-
-// forked from https://codepen.io/vincentbollaert/pen/MKxJGj
-var graphContainer = d3.select('#svg-container');
-var svg = d3.select('#svg');
-var margin = { top: 50, right: 50, bottom: 50, left: 50 };
-var duration = 500;
-var width = undefined,
-    height = undefined,
-    innerWidth = undefined,
-    innerHeight = undefined;
-var xScale = undefined,
-    yScale = undefined;
-
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
+var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
+    svg_height = 500;
+var svg = d3.select('#svg'),
+    margin = {top: 20, right: 20, bottom: 30, left: 50},
+    chart_width = svg_width - margin.left - margin.right,
+    chart_height = svg_height - margin.top - margin.bottom,
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+svg.attr('width', svg_width).attr('height', svg_height);
+var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
+var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]);
+var lineGenerator = d3.line()
+  .defined(function(d) { return d !== null; })
+  .x(function(d, i) { return xScale(times[i]); })
+  .y(yScale)
+  .curve(d3.curveCardinal);
+values.forEach(function(curve, i) {
+  var line = lineGenerator(curve);
+  g.append('path').attr('d', line).attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5);
+});
 
-(function init() {
-  getDimentions();
-  getScaleDomains();
-  getScaleRanges();
-  renderGraph(values, times);
-})();
-
-d3.select(window).on('resize', resize);
-
-function resize() {
-  destroyGraph();
-  getDimentions();
-  getScaleRanges();
-  renderGraph(values, times);
-}
-
-function renderGraph(values, times) {
-  var line = d3.line().x(function (d, i) {
-    return xScale(times[i]);
-  }).y(function (d) {
-    return yScale(d);
-  }).curve(d3.curveCatmullRom.alpha(0.5));
-
-  var area = d3.area().x(function (d, i) {
-    return xScale(times[i]);
-  }).y0(innerHeight).y1(function (d) {
-    return yScale(d);
-  }).curve(d3.curveCatmullRom.alpha(0.5));
-
-  // var xAxis = d3.axisBottom(xScale).tickFormat(function (d, i) {
-  //   return times[i];
-  // });
-  var xAxis = d3.axisBottom(xScale).ticks(d3.timeMinute.every(15));//.tickFormat(d3.timeMinute.every(15), '%a %d %I:%M'); // https://github.com/d3/d3-scale/blob/master/README.md#time_ticks
-
-  var yAxis = d3.axisLeft(yScale).ticks(4);
-
-  svg.attr('width', width).attr('height', height);
-
-  var inner = svg.selectAll('g.inner').data([null]);
-  inner.exit().remove();
-  inner.enter().append('g').attr('class', 'inner').attr('transform', 'translate(' + margin.top + ', ' + margin.right + ')');
-
-  var xa = svg.selectAll('g.inner').selectAll('g.x.axis').data([null]);
-  xa.exit().remove();
-  xa.enter().append('g').attr('class', 'x axis').attr('transform', 'translate(0, ' + innerHeight + ')').call(xAxis);
-
-  var ya = svg.selectAll('g.inner').selectAll('g.y.axis').data([null]);
-  ya.exit().remove();
-  ya.enter().append('g').attr('class', 'y axis').call(yAxis);
-
-
-  values.forEach(function(curve, i) {
-    var pathLine = svg.selectAll('g.inner').selectAll('.path-line' + i).data([null]);
-    pathLine.exit().remove();
-    pathLine.enter().append('path').attr('class', 'path-line path-line' + i).attr('d', function () {
-      return line(createZeroDataArray(curve));
-    }).transition().duration(duration).ease(d3.easePoly.exponent(2)).attr('d', function () {
-      return line(curve);
-    });
-
-    var pathArea = svg.selectAll('g.inner').selectAll('.path-area' + i).data([null]);
-    pathArea.exit().remove();
-    pathArea.enter().append('path').attr('class', 'path-area path-area' + i).attr('d', function () {
-      return area(createZeroDataArray(curve));
-    }).transition().duration(duration).ease(d3.easePoly.exponent(2)).attr('d', area(curve));
-  });
-}
-
-function getDimentions() {
-  width = graphContainer.node().clientWidth;
-  height = 500;
-  innerWidth = width - margin.left - margin.right;
-  innerHeight = height - margin.top - margin.bottom;
-}
-
-function getScaleRanges() {
-  xScale.range([0, innerWidth]).paddingInner(1);
-  yScale.range([innerHeight, 0]).nice();
-}
-
-function getScaleDomains() {
-  xScale = d3.scaleBand().domain([times[0], times[times.length-1]]);
-  // xScale = d3.scaleTime().domain([times[0], times[times.length-1]]);
-  yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]);
-}
-
-function destroyGraph() {
-  svg.selectAll('*').remove();
-}
-
-function createZeroDataArray(arr) {
-  var newArr = [];
-  arr.forEach(function (item, index) {
-    return newArr[index] = 0;
-  });
-  return newArr;
-}
 </script>
 </body>
 </html>
