@@ -9,7 +9,7 @@ $null_data = true;
 $charts = 0;
 $colors = ['#00a185', '#bdc3c7', '#33a7ff'];
 $_GET['meter0'] = 415;
-$_GET['meter1'] = 786;
+$_GET['meter1'] = 411;
 foreach ($_GET as $key => $value) { // how many charts are there?
   if (substr($key, 0, 5) === 'meter') {
     $charts++;
@@ -40,6 +40,7 @@ switch ($time_frame) {
     $to = strtotime(date('Y-m-d H') . ":59:59") + 1; // End of the hour
     $res = 'live';
     $increment = 60;
+    $xaxis_format = '%I:%M %p';
     break;
   case 'week':
     if (date('w') === '0') { // If it is sunday
@@ -51,12 +52,14 @@ switch ($time_frame) {
     }
     $res = 'hour';
     $increment = 3600;
+    $xaxis_format = '%d %b %I %p';
     break;
   default://case 'day':
     $from = strtotime(date('Y-m-d') . " 00:00:00"); // Start of day
     $to = strtotime(date('Y-m-d') . " 23:59:59") + 1; // End of day
     $res = 'quarterhour';
     $increment = 900;
+    $xaxis_format = '%I:%M %p';
     break;
 }
 $meter = new Meter($db);
@@ -95,7 +98,7 @@ for ($i = 0; $i < $charts; $i++) {
   <title>Time Series</title>
   <style>
   svg {
-    outline: 1px solid red;
+    /*outline: 1px solid red;*/
     margin-left: 25px;
   }
   .Grid {
@@ -115,7 +118,7 @@ if ($title_img || $title_txt) {
   echo '</div>';
 }
 ?>
-<svg id="svg"></svg>
+<svg id="svg"><image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image></svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
@@ -123,14 +126,19 @@ var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {
 var values = <?php echo json_encode($values) ?>;
 var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
     svg_height = 500;
+var charachter_width = svg_width/6,
+    charachter = document.getElementById('charachter');
+charachter.setAttribute('x', svg_width - charachter_width);
+charachter.setAttribute('width', charachter_width);
 var svg = d3.select('#svg'),
-    margin = {top: 20, right: 200, bottom: 30, left: 50},
+    margin = {top: 20, right: charachter_width, bottom: 50, left: 50},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
+var color = d3.scaleOrdinal(d3.schemeCategory10);
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; })
   .x(function(d, i) { return xScale(times[i]); })
@@ -138,17 +146,23 @@ var lineGenerator = d3.line()
   .curve(d3.curveCardinal);
 values.forEach(function(curve, i) {
   var line = lineGenerator(curve);
-  g.append('path').attr('d', line).attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-linejoin", "round")
-      .attr("stroke-linecap", "round")
-      .attr("stroke-width", 1.5);
+  g.append('path').attr('d', line).attr("fill", "none").attr("stroke", color(getRandomInt(0, 10)))
+    .attr("stroke-linejoin", "round")
+    .attr("stroke-linecap", "round")
+    .attr("stroke-width", 2);
 });
+var xaxis = d3.axisBottom(xScale).ticks(10, '<?php echo $xaxis_format ?>');
+var yaxis = d3.axisLeft(yScale).ticks(8);
 svg.append("g")
-  .attr("transform", "translate(0," + chart_height + ")")
-  .call(d3.axisBottom(xScale))
+  .call(xaxis)
+  .attr("transform", "translate("+margin.left+"," + (chart_height+margin.bottom) + ")");
 svg.append("g")
-  .call(d3.axisLeft(y));
+  .call(yaxis)
+  .attr("transform", "translate("+margin.left+",50)");
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 </script>
 </body>
 </html>
