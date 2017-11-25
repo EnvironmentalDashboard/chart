@@ -30,7 +30,7 @@ for ($i = 0; $i < $charts; $i++) {
 $title_img = true;//false;
 $title_txt = true;//false;
 $start = 0;
-$time_frame = 'week';
+$time_frame = 'day';
 foreach ($_GET as $key => $value) {
   $$key = $value; // replaced expected GET parameters with their actual value if they're present
 }
@@ -104,6 +104,19 @@ for ($i = 0; $i < $charts; $i++) {
   .Grid {
     margin-left: 25px;
   }
+  .x.axis path {
+    display: none;
+  }
+  .overlay {
+    fill: none;
+    pointer-events: all;
+  }
+  circle {
+    fill: red;
+  }
+  /*g {
+    outline: 1px solid red
+  }*/
   </style>
 </head>
 <body><?php
@@ -130,27 +143,33 @@ var charachter_width = svg_width/6,
     charachter = document.getElementById('charachter');
 charachter.setAttribute('x', svg_width - charachter_width);
 charachter.setAttribute('width', charachter_width);
+var color = d3.scaleOrdinal(d3.schemeCategory10);
 var svg = d3.select('#svg'),
     margin = {top: 20, right: charachter_width, bottom: 50, left: 50},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.bottom + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
-var color = d3.scaleOrdinal(d3.schemeCategory10);
 var lineGenerator = d3.line()
-  .defined(function(d) { return d !== null; })
-  .x(function(d, i) { return xScale(times[i]); })
-  .y(yScale)
-  .curve(d3.curveCardinal);
+  .defined(function(d) { return d !== null; }) // points are only defined if they are not null
+  .x(function(d, i) { return xScale(times[i]); }) // x coord
+  .y(yScale) // y coord
+  .curve(d3.curveCatmullRom); // smoothing
+var current_path = null;
 values.forEach(function(curve, i) {
+  // draw curve for each array in values
   var line = lineGenerator(curve);
+  if (i === 0) {
+    current_path = line;
+  }
   g.append('path').attr('d', line).attr("fill", "none").attr("stroke", color(getRandomInt(0, 10)))
     .attr("stroke-linejoin", "round")
     .attr("stroke-linecap", "round")
     .attr("stroke-width", 2);
 });
+// create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(10, '<?php echo $xaxis_format ?>');
 var yaxis = d3.axisLeft(yScale).ticks(8);
 svg.append("g")
@@ -158,7 +177,39 @@ svg.append("g")
   .attr("transform", "translate("+margin.left+"," + (chart_height+margin.bottom) + ")");
 svg.append("g")
   .call(yaxis)
-  .attr("transform", "translate("+margin.left+",50)");
+  .attr("transform", "translate("+margin.left+","+margin.bottom+")");
+// indicator ball
+var focus = svg.append("g")
+  .attr("class", "focus")
+  .style("display", "none");
+
+focus.append("circle")
+  .attr("r", 4.5);
+
+focus.append("text")
+  .attr("x", 9)
+  .attr("dy", ".35em");
+
+svg.append("rect")
+  .attr("class", "overlay")
+  .attr("width", chart_width)
+  .attr("height", chart_height)
+  .on("mouseover", function() { focus.style("display", null); })
+  .on("mouseout", function() { focus.style("display", "none"); })
+  .on("mousemove", mousemove);
+
+function mousemove() {
+  var x0 = xScale.invert(d3.mouse(this)[0]),
+    i = d3.bisectLeft(times, x0, 1),
+    d0 = {time: times[i - 1], value: values[0][i - 1]},
+    d1 = {time: times[i], value: values[0][i]},
+    d = x0 - d0.time > d1.time - x0 ? d1 : d0;
+  focus.attr("transform", "translate(" + xScale(d.time) + "," + yScale(d.value) + ")");
+  focus.select("text").text(d.value);
+}
+
+
+
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
