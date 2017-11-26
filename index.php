@@ -128,7 +128,7 @@ if ($time_frame === 'day' || $time_frame === 'week') {
   $prev_linesi = 0;
   $typical_line = []; // formed by taking the median of each sub array value in $prev_lines
   $last = null;
-  if ($time_frame === 'today') {
+  if ($time_frame === 'day') {
     $stmt = $db->prepare( // get npoints days worth of data
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ?
@@ -199,7 +199,8 @@ if ($time_frame === 'day' || $time_frame === 'week') {
       $typical_line[$i] = $median;
       // echo "\n\n\n\n\nIteration $i\n";
       // print_r($array_val);
-      // echo "\n{$cur}\n{$rv}";
+      // echo "\n{$rv}\n";
+      // var_dump($cur);
       if ($median > $max) {
         $max = $median;
       }
@@ -217,18 +218,20 @@ if ($time_frame === 'day' || $time_frame === 'week') {
   $values[] = $typical_line;
 }
 // die();
+parse_str($_SERVER['QUERY_STRING'], $qs);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=4">
   <title>Time Series</title>
   <style>
   svg {
     /*outline: 1px solid red;*/
-    margin-left: 25px;
+    margin: 40px 0px 0px 25px;
+    /*padding: 20px 0px 20px 0px;*/
   }
   .Grid {
     margin-left: 25px;
@@ -245,6 +248,22 @@ if ($time_frame === 'day' || $time_frame === 'week') {
     cursor: crosshair;
     pointer-events: all;
   }
+  .btn {
+    text-decoration: none;
+    padding: 7px 20px;
+    margin: 20px 15px 50px 0px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    /*color: #333;*/
+    color: #fff;
+    border-radius: 2px;
+    background: #3498db;
+  }
+  .dropdown {
+    display: none
+  }
+  text {
+    stroke: #333;
+  }
   </style>
 </head>
 <body><?php
@@ -259,6 +278,33 @@ if ($title_img || $title_txt) {
   echo '</div>';
 }
 ?>
+<div class="Grid" style="display:flex;justify-content: space-between;">
+  <div>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn">Graph overlay</a>
+  </div>
+  <div>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn">Hour</a>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'day'])); ?>" class="btn">Day</a>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'week'])); ?>" class="btn">Week</a>
+  </div>
+  <div><?php 
+    foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
+      AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
+      AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
+      OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
+      echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))." class='btn'>{$related_meter['name']}</a>";
+    }
+    foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
+      AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
+      AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
+      ORDER BY units DESC') as $row) {
+        echo "<a class='btn' href='?";
+        echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
+        echo "'>{$row['resource']}</a> \n";
+      }
+    ?>
+  </div>
+</div>
 <svg id="svg"><image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image></svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
@@ -269,6 +315,7 @@ var orb_values = <?php echo json_encode($orb_values) ?>;
 var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
     svg_height = 500;
 var charachter_width = svg_width/5,
+    charachter_height = charachter_width*(598/449),
     charachter = document.getElementById('charachter');
 var svg = d3.select('#svg'),
     margin = {top: 0, right: charachter_width, bottom: 20, left: 40},
@@ -277,9 +324,9 @@ var svg = d3.select('#svg'),
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 charachter.setAttribute('x', svg_width - charachter_width);
-charachter.setAttribute('y', 0);
+charachter.setAttribute('y', svg_height-(charachter_height));
 charachter.setAttribute('width', charachter_width);
-charachter.setAttribute('height', charachter_width*(598/449));
+charachter.setAttribute('height', charachter_height);
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
@@ -337,12 +384,15 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr("height", chart_height)
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
+var text = svg.append('text')
+  .attr('x', svg_width - charachter_width).attr('y', 50);
 function mousemoved() {
   var m = d3.mouse(this),
       p = closestPoint(current_path.node(), m);
   circle.attr("cx", p['x']).attr("cy", p['y']);
   var index = Math.round(imgScale(m[0]))
   image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+index+".gif");
+  text.text(d3.format('.2s')(yScale.invert(p['y'])));
 }
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
