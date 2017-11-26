@@ -20,7 +20,7 @@ foreach ($_GET as $key => $value) { // count the number of charts
   }
 }
 // each chart should be a parameter in the query string e.g. meter1=326 along optional other customizable variables
-for ($i = 0; $i < $charts; $i++) { // define the variables to be extract()'d
+for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extract()'d
   $var_name = "meter{$i}";
   $$var_name = false;
   $var_name = "fill{$i}";
@@ -36,7 +36,8 @@ $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
 // fish or squirrel?
 $units0 = $meter->getUnits($meter0);
-if ($units0 === 'Gallons / hour' || $units0 === 'Liters / hour' || $units0 === 'Liters' || $units0 === 'Milligrams per liter' || $units0 === 'Gallons per minute') {
+$resource0 = $meter->getResourceType($meter0);
+if ($resource0 === 'Water') {
   $charachter = 'fish';
   $number_of_frames = 49;
 } else {
@@ -101,10 +102,13 @@ for ($i = 0; $i < $charts; $i++) {
     }
   }
 }
+if ($min > 0) { // && it's a resource that starts from 0
+  $min = 0;
+}
 // calculate the typical line
 $orb_values = [];
-// print_r($values);
-if ($time_frame === 'day' || $time_frame === 'week') {
+$typical_time_frame = ($time_frame === 'day' || $time_frame === 'week');
+if ($typical_time_frame) {
   $num_points = count($times);
   // See if a configuration for the relative data exists in the db, and if not, have a default
   $stmt = $db->prepare('SELECT relative_values.grouping FROM relative_values INNER JOIN meters ON meters.id = ? LIMIT 1');
@@ -259,10 +263,29 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
     background: #3498db;
   }
   .dropdown {
-    display: none
+    position: absolute;
+    list-style: none;
+    padding: 7px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    background: #fff;
+    margin-top: 13px;
+    padding: 0px
+  }
+  .dropdown li {
+    padding: 8px 16px;
+    color: #333;
+    text-align: center;
+  }
+  .dropdown li:hover {
+    background: #3498db;
+    color: #fff;
+  }
+  .dropdown a {
+    text-decoration: none;
   }
   text {
     stroke: #333;
+    font-weight: 400;
   }
   </style>
 </head>
@@ -280,7 +303,18 @@ if ($title_img || $title_txt) {
 ?>
 <div class="Grid" style="display:flex;justify-content: space-between;">
   <div>
-    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn">Graph overlay</a>
+    <a href="#" id="chart-overlay" class="btn">Graph overlay</a>
+    <ul class="dropdown" style="display: none" id="chart-dropdown">
+      <a href="#"><li>Show previous <?php echo $time_frame ?></li></a>
+      <?php echo ($typical_time_frame) ? '<a href="#" data-show="1"><li>Hide typical</li></a>' : ''; ?>
+      <?php for ($i = 1; $i < $charts; $i++) {
+        $v = "meter{$i}";
+        if ($$v !== false) {
+          $chart_name = $meter->getName($$v);
+          echo "<a href='#' data-show='{$i}'><li>{$chart_name}</li></a>";
+        }
+      } ?>
+    </ul>
   </div>
   <div>
     <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn">Hour</a>
@@ -309,6 +343,19 @@ if ($title_img || $title_txt) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
+var dropdown_menu = document.getElementById('chart-dropdown');
+var dropdown_menu_shown = false;
+console.log(dropdown_menu);
+document.getElementById('chart-overlay').addEventListener('click', function() {
+  console.log(dropdown_menu);
+  if (dropdown_menu_shown) {
+    dropdown_menu.setAttribute('style', 'display:none');
+    dropdown_menu_shown = false;
+  } else {
+    dropdown_menu.setAttribute('style', '');
+    dropdown_menu_shown = true;
+  }
+});
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
 var orb_values = <?php echo json_encode($orb_values) ?>;
