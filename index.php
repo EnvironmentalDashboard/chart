@@ -8,6 +8,11 @@ require_once 'includes/find_nearest.php';
 require_once 'includes/median.php';
 require_once 'includes/change_res.php';
 define('NULL_DATA', true); // set to false to fill in data
+define('MIN', 60);
+define('QUARTERHOUR', 900);
+define('HOUR', 3600);
+define('DAY', 86400);
+define('WEEK', 604800);
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
 if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
@@ -50,9 +55,10 @@ switch ($time_frame) {
     $from = strtotime(date('Y-m-d H') . ':00:00'); // Start of hour
     $to = strtotime(date('Y-m-d H') . ":59:59") + 1; // End of the hour
     $res = 'live';
-    $increment = 60;
+    $increment = MIN;
     $xaxis_format = '%I:%M %p';
-    $pct_thru = ($now - $from) / 3600;
+    $pct_thru = ($now - $from) / HOUR;
+    $double_time = $from - HOUR;
     break;
   case 'week':
     if (date('w') === '0') { // If it is sunday
@@ -63,25 +69,28 @@ switch ($time_frame) {
       $to = strtotime('next sunday')-1; // End of the week
     }
     $res = 'hour';
-    $increment = 3600;
+    $increment = HOUR;
     $xaxis_format = '%d %b %I %p';
-    $pct_thru = ($now - $from) / 604800;
+    $pct_thru = ($now - $from) / WEEK;
+    $double_time = $from - WEEK;
     break;
   default://case 'day':
     $from = strtotime(date('Y-m-d') . " 00:00:00"); // Start of day
     $to = strtotime(date('Y-m-d') . " 23:59:59") + 1; // End of day
     $res = 'quarterhour';
-    $increment = 900;
+    $increment = QUARTERHOUR;
     $xaxis_format = '%I:%M %p';
-    $pct_thru = ($now - $from) / 86400;
+    $pct_thru = ($now - $from) / DAY;
+    $double_time = $from - DAY;
     break;
 }
 $times = range($from, $to, $increment); // each array in $values should be count($times) long such that the float in the $values array corresponds to the time in the $times array with the same index
+$num_points = count($times);
 $values = [];
 $max = PHP_INT_MIN;
 $min = PHP_INT_MAX;
 // get data from db for each chart and format so that it matches $times
-for ($i = 0; $i < $charts; $i++) { 
+for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus a historical chart and typical chart (typical only on day/week res)
   $var_name = "meter{$i}";
   if ($$var_name === false) {
     continue;
@@ -102,6 +111,20 @@ for ($i = 0; $i < $charts; $i++) {
     }
   }
 }
+// get historical data for first meter
+$data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
+if (!empty($data)) {
+  foreach (array_slice(range($double_time, $from, $increment), -$num_points) as $time) { // need new $times that is exactly $num_points long
+    $best_guess = find_nearest($data, $time, NULL_DATA);
+    $values[$charts][] = $best_guess; // historical chart is last chart in $values, 2nd to last if there's a typical line
+    if ($best_guess !== null && $best_guess > $max) {
+      $max = $best_guess;
+    }
+    if ($best_guess !== null && $best_guess < $min) {
+      $min = $best_guess;
+    }
+  }
+}
 if ($min > 0) { // && it's a resource that starts from 0
   $min = 0;
 }
@@ -109,7 +132,6 @@ if ($min > 0) { // && it's a resource that starts from 0
 $orb_values = [];
 $typical_time_frame = ($time_frame === 'day' || $time_frame === 'week');
 if ($typical_time_frame) {
-  $num_points = count($times);
   // See if a configuration for the relative data exists in the db, and if not, have a default
   $stmt = $db->prepare('SELECT relative_values.grouping FROM relative_values INNER JOIN meters ON meters.id = ? LIMIT 1');
   $stmt->execute([$meter0]);
@@ -219,9 +241,8 @@ if ($typical_time_frame) {
   //   $values[] = $l;
   // }
   // $values[] = $orb_values;
-  $values[] = $typical_line;
+  $values[] = $typical_line; // typical line is last chart in $values
 }
-// die();
 parse_str($_SERVER['QUERY_STRING'], $qs);
 ?>
 <!DOCTYPE html>
@@ -339,15 +360,16 @@ if ($title_img || $title_txt) {
     ?>
   </div>
 </div>
-<svg id="svg"><image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image></svg>
+<svg id="svg">
+  <text x="-300" y="35%" transform="translate(0)rotate(-90 10 175)" font-size="11" fill="#333"><?php echo $units0; ?></text>
+  <image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image>
+</svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
 var dropdown_menu = document.getElementById('chart-dropdown');
 var dropdown_menu_shown = false;
-console.log(dropdown_menu);
 document.getElementById('chart-overlay').addEventListener('click', function() {
-  console.log(dropdown_menu);
   if (dropdown_menu_shown) {
     dropdown_menu.setAttribute('style', 'display:none');
     dropdown_menu_shown = false;
@@ -356,14 +378,24 @@ document.getElementById('chart-overlay').addEventListener('click', function() {
     dropdown_menu_shown = true;
   }
 });
+<?php /*for ($i=0; $i < count($values); $i++) { 
+  for ($j=0; $j < count($values[$i]); $j++) { 
+    $values[$i][$j] = round($values[$i][$j]);
+  }
+}*/ ?>
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
 var orb_values = <?php echo json_encode($orb_values) ?>;
 var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
-    svg_height = 500;
-var charachter_width = svg_width/5,
-    charachter_height = charachter_width*(598/449),
-    charachter = document.getElementById('charachter');
+    svg_height = svg_width / 3;
+if (svg_width < 2000) {
+  var charachter_width = svg_width/5,
+      charachter_height = charachter_width*(598/449);
+} else {
+  var charachter_width = 449,
+      charachter_height = 598;
+}
+var charachter = document.getElementById('charachter');
 var svg = d3.select('#svg'),
     margin = {top: 0, right: charachter_width, bottom: 20, left: 40},
     chart_width = svg_width - margin.left - margin.right,
@@ -402,11 +434,11 @@ values.forEach(function(curve, i) {
     .attr("stroke-linejoin", "round")
     .attr("stroke-linecap", "round")
     .attr("stroke-width", 2);
+  var area = areaGenerator(curve);
   g.append("path")
-    .datum(curve)
+    .attr("d", area)
     .attr("fill", color(i))
-    .attr("opacity", "0.1")
-    .attr("d", areaGenerator);
+    .attr("opacity", "0.1");
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(10, '<?php echo $xaxis_format ?>');

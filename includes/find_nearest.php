@@ -4,7 +4,7 @@
  * Output: the value in $arr recorded on $sec. if no value exists, give best approximation
  */
 function find_nearest($arr, $sec, $null = true) { 
-  static $i = 0;
+  static $i = 0; // static so it keeps its place in the array
   $count = count($arr);
   while ($i < $count) {
 
