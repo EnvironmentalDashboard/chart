@@ -18,12 +18,13 @@ $now = time();
 if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
   $_GET['meter0'] = 415; // default meter
 }
-$charts = 0;
+$charts = 0; // the number of $meter variables e.g. $meter0, $meter1, ...
 foreach ($_GET as $key => $value) { // count the number of charts
   if (substr($key, 0, 5) === 'meter') {
     $charts++;
   }
 }
+$total_charts = $charts; // the number of arrays in $values
 // each chart should be a parameter in the query string e.g. meter1=326 along optional other customizable variables
 for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extract()'d
   $var_name = "meter{$i}";
@@ -111,23 +112,7 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
     }
   }
 }
-// get historical data for first meter
-$data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
-if (!empty($data)) {
-  foreach (array_slice(range($double_time, $from, $increment), -$num_points) as $time) { // need new $times that is exactly $num_points long
-    $best_guess = find_nearest($data, $time, NULL_DATA);
-    $values[$charts][] = $best_guess; // historical chart is last chart in $values, 2nd to last if there's a typical line
-    if ($best_guess !== null && $best_guess > $max) {
-      $max = $best_guess;
-    }
-    if ($best_guess !== null && $best_guess < $min) {
-      $min = $best_guess;
-    }
-  }
-}
-if ($min > 0) { // && it's a resource that starts from 0
-  $min = 0;
-}
+
 // calculate the typical line
 $orb_values = [];
 $typical_time_frame = ($time_frame === 'day' || $time_frame === 'week');
@@ -241,7 +226,25 @@ if ($typical_time_frame) {
   //   $values[] = $l;
   // }
   // $values[] = $orb_values;
-  $values[] = $typical_line; // typical line is last chart in $values
+  $values[] = $typical_line; // typical line is 2nd to last chart in $values
+  $total_charts++;
+}
+// get historical data for first meter
+$data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
+if (!empty($data)) {
+  foreach (array_slice(range($double_time, $from, $increment), -$num_points) as $time) { // need new $times that is exactly $num_points long
+    $best_guess = find_nearest($data, $time, NULL_DATA);
+    $values[$total_charts][] = $best_guess; // historical chart is last chart in $values
+    if ($best_guess !== null && $best_guess > $max) {
+      $max = $best_guess;
+    }
+    if ($best_guess !== null && $best_guess < $min) {
+      $min = $best_guess;
+    }
+  }
+}
+if ($min > 0) { // && it's a resource that starts from 0
+  $min = 0;
 }
 parse_str($_SERVER['QUERY_STRING'], $qs);
 ?>
@@ -257,6 +260,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
     /*outline: 1px solid red;*/
     margin: 40px 0px 0px 25px;
     /*padding: 20px 0px 20px 0px;*/
+    background: #ecf0f1
   }
   .Grid {
     margin-left: 25px;
@@ -308,6 +312,13 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
     stroke: #333;
     font-weight: 400;
   }
+  #current-reading {
+    font-size: 36px;
+    text-anchor: middle;
+  }
+  #background {
+    fill: white
+  }
   </style>
 </head>
 <body><?php
@@ -326,8 +337,8 @@ if ($title_img || $title_txt) {
   <div>
     <a href="#" id="chart-overlay" class="btn">Graph overlay</a>
     <ul class="dropdown" style="display: none" id="chart-dropdown">
-      <a href="#"><li>Show previous <?php echo $time_frame ?></li></a>
-      <?php echo ($typical_time_frame) ? '<a href="#" data-show="1"><li>Hide typical</li></a>' : ''; ?>
+      <a href="#" id="historical-toggle"><li id="historical-toggle-text">Show previous <?php echo $time_frame ?></li></a>
+      <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-show="1"><li id="typical-toggle-text">Hide typical</li></a>' : ''; ?>
       <?php for ($i = 1; $i < $charts; $i++) {
         $v = "meter{$i}";
         if ($$v !== false) {
@@ -361,15 +372,32 @@ if ($title_img || $title_txt) {
   </div>
 </div>
 <svg id="svg">
+  <rect id="background" />
   <text x="-300" y="35%" transform="translate(0)rotate(-90 10 175)" font-size="11" fill="#333"><?php echo $units0; ?></text>
   <image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image>
 </svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
+<?php if ($typical_time_frame) { ?>
+var typical_shown = false;
+document.getElementById('typical-toggle').addEventListener('click', function(e) {
+  e.preventDefault();
+  if (typical_shown) {
+    document.getElementById('chart<?php echo $total_charts-1 ?>').style.display = 'none';
+    document.getElementById('typical-toggle-text').innerHTML = 'Show typical';
+    typical_shown = false;
+  } else {
+    document.getElementById('chart<?php echo $total_charts-1 ?>').style.display = '';
+    document.getElementById('typical-toggle-text').innerHTML = 'Hide typical';
+    typical_shown = true;
+  }
+});
+<?php } ?>
 var dropdown_menu = document.getElementById('chart-dropdown');
 var dropdown_menu_shown = false;
-document.getElementById('chart-overlay').addEventListener('click', function() {
+document.getElementById('chart-overlay').addEventListener('click', function(e) {
+  e.preventDefault();
   if (dropdown_menu_shown) {
     dropdown_menu.setAttribute('style', 'display:none');
     dropdown_menu_shown = false;
@@ -378,16 +406,24 @@ document.getElementById('chart-overlay').addEventListener('click', function() {
     dropdown_menu_shown = true;
   }
 });
-<?php /*for ($i=0; $i < count($values); $i++) { 
-  for ($j=0; $j < count($values[$i]); $j++) { 
-    $values[$i][$j] = round($values[$i][$j]);
+var historical_shown = false;
+document.getElementById('historical-toggle').addEventListener('click', function(e) {
+  e.preventDefault();
+  if (historical_shown) {
+    document.getElementById('chart<?php echo $total_charts ?>').style.display = 'none';
+    document.getElementById('historical-toggle-text').innerHTML = 'Show previous <?php echo $time_frame ?>';
+    historical_shown = false;
+  } else {
+    document.getElementById('chart<?php echo $total_charts ?>').style.display = '';
+    document.getElementById('historical-toggle-text').innerHTML = 'Hide previous <?php echo $time_frame ?>';
+    historical_shown = true;
   }
-}*/ ?>
+});
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
 var orb_values = <?php echo json_encode($orb_values) ?>;
 var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
-    svg_height = svg_width / 3;
+    svg_height = svg_width / 2.75;
 if (svg_width < 2000) {
   var charachter_width = svg_width/5,
       charachter_height = charachter_width*(598/449);
@@ -397,15 +433,19 @@ if (svg_width < 2000) {
 }
 var charachter = document.getElementById('charachter');
 var svg = d3.select('#svg'),
-    margin = {top: 0, right: charachter_width, bottom: 20, left: 40},
+    margin = {top: 25, right: charachter_width, bottom: 25, left: 40},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 charachter.setAttribute('x', svg_width - charachter_width);
-charachter.setAttribute('y', svg_height-(charachter_height));
+charachter.setAttribute('y', (svg_height-(charachter_height))-margin.bottom);
 charachter.setAttribute('width', charachter_width);
 charachter.setAttribute('height', charachter_height);
+var bg = document.getElementById('background');
+bg.setAttribute('width', chart_width);
+bg.setAttribute('height', chart_height);
+bg.setAttribute("transform", "translate(" + margin.left + "," + margin.top + ")");
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
@@ -420,13 +460,14 @@ var areaGenerator = d3.area()
   .defined(function(d) { return d !== null; }) // points are only defined if they are not null
   .x(function(d, i) { return xScale(times[i]); }) // x coord
   .y1(yScale) // y coord
-  .y0(yScale(0))
+  .y0(chart_height)
   .curve(d3.curveCatmullRom); // smoothing
 var current_path = null;
 values.forEach(function(curve, i) {
   // draw curve for each array in values
   var line = lineGenerator(curve);
-  var path = g.append('path').attr('d', line);
+  var path_g = g.append('g').attr('id', 'chart'+i);
+  var path = path_g.append('path').attr('d', line);
   if (i === 0) {
     current_path = path;
   }
@@ -435,10 +476,13 @@ values.forEach(function(curve, i) {
     .attr("stroke-linecap", "round")
     .attr("stroke-width", 2);
   var area = areaGenerator(curve);
-  g.append("path")
+  path_g.append("path")
     .attr("d", area)
     .attr("fill", color(i))
     .attr("opacity", "0.1");
+  if (i === <?php echo $total_charts ?>) {
+    path_g.attr('style', 'display:none');
+  }
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(10, '<?php echo $xaxis_format ?>');
@@ -453,8 +497,8 @@ svg.append("g")
 var image = d3.select('#charachter');
 // indicator ball
 var circle = svg.append("circle")
-  .attr("cx", -10)
-  .attr("cy", -10)
+  .attr("cx", -100)
+  .attr("cy", -100)
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", 8)
   .attr("fill", color(0));
@@ -463,8 +507,7 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr("height", chart_height)
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
-var text = svg.append('text')
-  .attr('x', svg_width - charachter_width).attr('y', 50);
+var text = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - (charachter_width/2)).attr('y', 50);
 function mousemoved() {
   var m = d3.mouse(this),
       p = closestPoint(current_path.node(), m);
