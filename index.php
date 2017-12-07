@@ -225,7 +225,6 @@ if ($typical_time_frame) {
   // foreach ($prev_lines as $l) {
   //   $values[] = $l;
   // }
-  // $values[] = $orb_values;
   $values[] = $typical_line; // typical line is 2nd to last chart in $values
   $total_charts++;
 }
@@ -258,7 +257,8 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   <style>
   svg {
     /*outline: 1px solid red;*/
-    margin: 40px 0px 0px 25px;
+    /*margin: 40px 0px 0px 25px;*/
+    margin-top: 40px;
     /*padding: 20px 0px 20px 0px;*/
     background: #ecf0f1
   }
@@ -422,7 +422,7 @@ document.getElementById('historical-toggle').addEventListener('click', function(
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
 var values = <?php echo json_encode($values) ?>;
 var orb_values = <?php echo json_encode($orb_values) ?>;
-var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) - 50,
+var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0), // -50 if there's 25 margin on svg
     svg_height = svg_width / 2.75;
 if (svg_width < 2000) {
   var charachter_width = svg_width/5,
@@ -449,7 +449,7 @@ bg.setAttribute("transform", "translate(" + margin.left + "," + margin.top + ")"
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
-var imgScale = d3.scaleLinear().domain([0, Math.ceil(chart_width*<?php echo $pct_thru+0.01 ?>)]).range([0, <?php echo $number_of_frames ?>]).clamp(true);
+var imgScale = d3.scaleLinear().domain([0, Math.ceil(chart_width*<?php echo $pct_thru+0.01 ?>)]).range([0, orb_values.length]).clamp(true);
 // draw lines
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; }) // points are only defined if they are not null
@@ -475,11 +475,13 @@ values.forEach(function(curve, i) {
     .attr("stroke-linejoin", "round")
     .attr("stroke-linecap", "round")
     .attr("stroke-width", 2);
+  <?php echo ($typical_time_frame) ? 'if (i !== '.($total_charts-1).') {' : ''; ?>
   var area = areaGenerator(curve);
   path_g.append("path")
     .attr("d", area)
     .attr("fill", color(i))
     .attr("opacity", "0.1");
+  <?php echo ($typical_time_frame) ? '}' : ''; ?>
   if (i === <?php echo $total_charts ?>) {
     path_g.attr('style', 'display:none');
   }
@@ -513,7 +515,8 @@ function mousemoved() {
       p = closestPoint(current_path.node(), m);
   circle.attr("cx", p['x']).attr("cy", p['y']);
   var index = Math.round(imgScale(m[0]))
-  image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+index+".gif");
+  // console.log(index)
+  image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
   text.text(d3.format('.2s')(yScale.invert(p['y'])));
 }
 function closestPoint(pathNode, point) {
