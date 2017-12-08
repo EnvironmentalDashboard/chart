@@ -115,7 +115,7 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
 
 // calculate the typical line
 $orb_values = [];
-$typical_time_frame = ($time_frame === 'day' || $time_frame === 'week');
+$typical_time_frame = ($time_frame === 'day' || $time_frame === 'week'); // there is only enough data to do the relative value calculation with these resolutions
 if ($typical_time_frame) {
   // See if a configuration for the relative data exists in the db, and if not, have a default
   $stmt = $db->prepare('SELECT relative_values.grouping FROM relative_values INNER JOIN meters ON meters.id = ? LIMIT 1');
@@ -221,10 +221,10 @@ if ($typical_time_frame) {
       $sec += $inc;
     }
   }
-  $prev_lines = null; // this is a pretty big variable, free for gc
-  // foreach ($prev_lines as $l) {
-  //   $values[] = $l;
-  // }
+  // $prev_lines = null; // this is a pretty big variable, free for gc
+  foreach ($prev_lines as $l) {
+    $values[] = $l;
+  }
   $values[] = $typical_line; // typical line is 2nd to last chart in $values
   $total_charts++;
 }
@@ -240,6 +240,25 @@ if (!empty($data)) {
     if ($best_guess !== null && $best_guess < $min) {
       $min = $best_guess;
     }
+  }
+}
+if (!$typical_time_frame) { // charachter mood should be difference of current and past data
+  $max_diff = PHP_INT_MIN;
+  $min_diff = PHP_INT_MAX;
+  $j = count($values) - 1;
+  $tmp = [];
+  for ($i = 0; $i < $num_points; $i++) { 
+    $diff = $values[0][$i] - $values[$j][$i];
+    if ($diff > $max) { // subtract historical from current
+      $max = $diff;
+    }
+    if ($diff < $min) {
+      $min = $diff;
+    }
+    $tmp[] = $diff;
+  }
+  foreach ($tmp as $val) {
+    $orb_values[] = Meter::convertRange($val, $min_diff, $max_diff, 0, $number_of_frames);
   }
 }
 if ($min > 0) { // && it's a resource that starts from 0
