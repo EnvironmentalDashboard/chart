@@ -442,11 +442,18 @@ document.getElementById('historical-toggle').addEventListener('click', function(
     historical_shown = true;
   }
 });
-var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>;
-var values = <?php echo json_encode($values) ?>;
-var orb_values = <?php echo json_encode($orb_values) ?>;
-var svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0), // -50 if there's 25 margin on svg
+var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
+    values = <?php echo json_encode($values) ?>,
+    values0length = values[0].length,
+    orb_values = <?php echo json_encode($orb_values) ?>,
+    svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0), // -50 if there's 25 margin on svg
     svg_height = svg_width / 2.75;
+for (var i = values[0].length-1; i >= 0; i--) { // calc real width
+  if (values[0][i] !== null) {
+    break;
+  }
+  values0length--;
+}
 if (svg_width < 2000) {
   var charachter_width = svg_width/5,
       charachter_height = charachter_width*(598/449);
@@ -472,7 +479,8 @@ bg.setAttribute("transform", "translate(" + margin.left + "," + margin.top + ")"
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
-var imgScale = d3.scaleLinear().domain([0, Math.ceil(chart_width*<?php echo $pct_thru+0.01 ?>)]).range([0, orb_values.length]).clamp(true);
+var imgScale = d3.scaleLinear().domain([0, 1]).range([0, orb_values.length]).clamp(true); // 0,1 or 0, chart_width*(values0length/values[0].length)
+var values0Scale = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true);
 // draw lines
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; }) // points are only defined if they are not null
@@ -535,23 +543,48 @@ svg.append("rect") // circle moves when mouse is over this rect
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', 50);
 var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', 50);
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', 80).attr('text-anchor', 'start').text("<?php echo $units0 ?>");
-svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("<?php echo $units0 ?>-hours today");
+svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("Kilowatt-hours today");
+var timeout = null,
+    interval = null;
 function mousemoved() {
+  clearTimeout(timeout);
+  clearInterval(interval);
+  timeout = setTimeout(play_data, 3000);
   var m = d3.mouse(this),
       p = closestPoint(current_path.node(), m);
   circle.attr("cx", p['x']).attr("cy", p['y']);
-  var index = Math.round(imgScale(m[0]))
-  // console.log(index)
+  var frac = m[0]/(chart_width*(values0length/values[0].length));
+  var index = Math.round(imgScale(frac));
+  // console.log(index) this may not be the right thing to use
   image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
   current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
   var total_kw = 0,
-      kw_count = 0;
-  for (var i = index; i >= 0; i--) {
+      kw_count = 0,
+      index = values0Scale(frac);
+  // console.log(index/values0length);
+  for (var i = 0; i <= index; i++) {
     total_kw += values[0][i];
     kw_count++;
   }
-  accum.text(d3.format('.2s')(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, 0)));
+  accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, 0));
 }
+function play_data() {
+  var end_i = Math.floor(current_path.node().getBBox().width),
+      i = 0, total_kw = 0;
+  interval = setInterval(function() { // will go for end_i iterations
+    var p = closestPoint(current_path.node(), [i, -1]); // -1 is a dummy value
+    circle.attr("cx", p['x']).attr("cy", p['y']);
+    current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
+    // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
+    total_kw += values[0][Math.floor((i/end_i)*values0length)];
+    i++;
+    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, 0));
+    if (i >= end_i) {
+      clearInterval(interval);
+    }
+  }, 30);
+}
+play_data();
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
   // var mouseDate = xScale.invert(point[0]);
