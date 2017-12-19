@@ -221,10 +221,10 @@ if ($typical_time_frame) {
       $sec += $inc;
     }
   }
-  // $prev_lines = null; // this is a pretty big variable, free for gc
-  foreach ($prev_lines as $l) {
-    $values[] = $l;
-  }
+  $prev_lines = null; // this is a pretty big variable, free for gc
+  // foreach ($prev_lines as $l) {
+  //   $values[] = $l;
+  // }
   $values[] = $typical_line; // typical line is 2nd to last chart in $values
   $total_charts++;
 }
