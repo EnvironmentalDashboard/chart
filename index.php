@@ -333,7 +333,11 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   }
   #current-reading {
     font-size: 36px;
-    text-anchor: middle;
+    text-anchor: start;
+  }
+  #accum {
+    font-size: 36px;
+    text-anchor: end;
   }
   #background {
     fill: white
@@ -528,7 +532,10 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr("height", chart_height)
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
-var text = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - (charachter_width/2)).attr('y', 50);
+var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', 50);
+var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', 50);
+svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', 80).attr('text-anchor', 'start').text("<?php echo $units0 ?>");
+svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("<?php echo $units0 ?>-hours today");
 function mousemoved() {
   var m = d3.mouse(this),
       p = closestPoint(current_path.node(), m);
@@ -536,7 +543,14 @@ function mousemoved() {
   var index = Math.round(imgScale(m[0]))
   // console.log(index)
   image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
-  text.text(d3.format('.2s')(yScale.invert(p['y'])));
+  current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
+  var total_kw = 0,
+      kw_count = 0;
+  for (var i = index; i >= 0; i--) {
+    total_kw += values[0][i];
+    kw_count++;
+  }
+  accum.text(d3.format('.2s')(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, 0)));
 }
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
@@ -563,6 +577,18 @@ function closestPoint(pathNode, point) {
     }
   }
   return pos
+}
+function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
+  var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
+  // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
+  if (current_state === 0) {
+    return Math.round(kwh).toLocaleString(); // kWh = time elapsed in hours * kilowatts so far
+  }
+  else if (current_state === 1) {
+    return Math.round(kwh*1.22).toLocaleString(); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
+  } else if (current_state === 2) {
+    return Math.round(kwh*0.11).toLocaleString(); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
+  }
 }
 </script>
 </body>
