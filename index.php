@@ -274,15 +274,19 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   <link rel="stylesheet" href="style.css?v=4">
   <title>Time Series</title>
   <style>
+  body {
+    background: #ECEFF1;
+  }
   svg {
     /*outline: 1px solid red;*/
     /*margin: 40px 0px 0px 25px;*/
-    margin-top: 40px;
+    margin-top: 25px;
     /*padding: 20px 0px 20px 0px;*/
-    background: #ecf0f1
+    background: #ECEFF1;
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.12), 0 -1px 2px rgba(0,0,0,0.24);
   }
   .Grid {
-    margin-left: 25px;
+    margin-left: 5px;
   }
   .domain {
     display: none;
@@ -291,7 +295,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
     fill: none;
     pointer-events: all;
   }
-  rect {
+  #hover-space {
     fill: none;
     cursor: crosshair;
     pointer-events: all;
@@ -299,17 +303,20 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   .btn {
     text-decoration: none;
     padding: 7px 20px;
-    margin: 20px 15px 50px 0px;
+    padding: .7vw 2vw;
+    margin: 0px
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     /*color: #333;*/
     color: #fff;
     border-radius: 2px;
     background: #3498db;
+    font-size: 1.4vw;
   }
   .dropdown {
     position: absolute;
     list-style: none;
     padding: 7px 20px;
+    padding: .7vw 2vw;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     background: #fff;
     margin-top: 13px;
@@ -326,21 +333,31 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   }
   .dropdown a {
     text-decoration: none;
+    font-size: 1.3vw;
   }
   text {
     stroke: #333;
     font-weight: 400;
   }
   #current-reading {
-    font-size: 36px;
+    font-size: 3vw;
     text-anchor: start;
   }
   #accum {
-    font-size: 36px;
+    font-size: 3vw;
     text-anchor: end;
   }
   #background {
     fill: white
+  }
+  #menu {
+    fill: #DFE3E4;
+  }
+  .menu-option {
+    stroke: #333;
+    fill: #333;
+    font-size: 1.5vw;
+    cursor: pointer;
   }
   </style>
 </head>
@@ -395,6 +412,12 @@ if ($title_img || $title_txt) {
   </div>
 </div>
 <svg id="svg">
+  <defs>
+    <linearGradient id="shadow">
+      <stop class="stop1" stop-color="#ECEFF1" offset="0%"/>
+      <stop class="stop2" stop-color="#B0BEC5" offset="100%"/>
+    </linearGradient>
+  </defs>
   <rect id="background" />
   <text x="-300" y="35%" transform="translate(0)rotate(-90 10 175)" font-size="11" fill="#333"><?php echo $units0; ?></text>
   <image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image>
@@ -446,7 +469,7 @@ var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {
     values = <?php echo json_encode($values) ?>,
     values0length = values[0].length,
     orb_values = <?php echo json_encode($orb_values) ?>,
-    svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0), // -50 if there's 25 margin on svg
+    svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
     svg_height = svg_width / 2.75;
 for (var i = values[0].length-1; i >= 0; i--) { // calc real width
   if (values[0][i] !== null) {
@@ -469,9 +492,18 @@ var svg = d3.select('#svg'),
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 svg.attr('width', svg_width).attr('height', svg_height);
 charachter.setAttribute('x', svg_width - charachter_width);
-charachter.setAttribute('y', (svg_height-(charachter_height))-margin.bottom);
+charachter.setAttribute('y', svg_height-charachter_height-margin.bottom);
 charachter.setAttribute('width', charachter_width);
 charachter.setAttribute('height', charachter_height);
+var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/3,
+    button_offset = margin.right/5,
+    current_state = 0;
+svg.append('rect').attr('id', 'menu').attr('y', svg_height-charachter_height-margin.bottom-(menu_height)).attr('x', svg_width - charachter_width).attr('width', charachter_width).attr('height', menu_height);
+svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset)).attr('width', charachter_width).text('☺').attr('class', 'menu-option').attr('data-option', 0).on('click', menu_click);
+svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset*2)).attr('width', charachter_width).text('kWh').attr('class', 'menu-option').attr('data-option', 1).on('click', menu_click);
+svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset*3)).attr('width', charachter_width).text('CO2').attr('class', 'menu-option').attr('data-option', 2).on('click', menu_click);
+svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset*4)).attr('width', charachter_width).text('$').attr('class', 'menu-option').attr('data-option', 3).on('click', menu_click);
+svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
 var bg = document.getElementById('background');
 bg.setAttribute('width', chart_width);
 bg.setAttribute('height', chart_height);
@@ -538,12 +570,13 @@ var circle = svg.append("circle")
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)
+  .attr('id', 'hover-space')
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', 50);
 var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', 50);
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', 80).attr('text-anchor', 'start').text("<?php echo $units0 ?>");
-svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("Kilowatt-hours today");
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("Kilowatt-hours today");
 var timeout = null,
     interval = null;
 function mousemoved() {
@@ -556,7 +589,9 @@ function mousemoved() {
   var frac = m[0]/(chart_width*(values0length/values[0].length));
   var index = Math.round(imgScale(frac));
   // console.log(index) this may not be the right thing to use
-  image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
+  if (orb_values[index] !== undefined) {
+    image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
+  }
   current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
   var total_kw = 0,
       kw_count = 0,
@@ -566,7 +601,17 @@ function mousemoved() {
     total_kw += values[0][i];
     kw_count++;
   }
-  accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, 0));
+  accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
+}
+function menu_click() {
+  current_state = parseInt(this.getAttribute('data-option'));
+  if (current_state === 0 || current_state === 1) {
+    accum_units.text('Kilowatt-hours today');
+  } else if (current_state === 2) {
+    accum_units.text('Pounds of CO2 today');
+  } else if (current_state === 3) {
+    accum_units.text('Dollars spent today');
+  }
 }
 function play_data() {
   var end_i = Math.floor(current_path.node().getBBox().width),
@@ -578,7 +623,7 @@ function play_data() {
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
-    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, 0));
+    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, current_state));
     if (i >= end_i) {
       clearInterval(interval);
     }
@@ -614,12 +659,12 @@ function closestPoint(pathNode, point) {
 function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
   // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
-  if (current_state === 0) {
+  if (current_state === 0 || current_state === 1) {
     return Math.round(kwh).toLocaleString(); // kWh = time elapsed in hours * kilowatts so far
   }
-  else if (current_state === 1) {
+  else if (current_state === 2) {
     return Math.round(kwh*1.22).toLocaleString(); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
-  } else if (current_state === 2) {
+  } else if (current_state === 3) {
     return Math.round(kwh*0.11).toLocaleString(); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
   }
 }
