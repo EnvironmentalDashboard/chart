@@ -280,7 +280,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
   svg {
     /*outline: 1px solid red;*/
     /*margin: 40px 0px 0px 25px;*/
-    margin-top: 25px;
+    margin-top: 1.5vw;
     /*padding: 20px 0px 20px 0px;*/
     background: #ECEFF1;
     box-shadow: 0 -1px 3px rgba(0,0,0,0.12), 0 -1px 2px rgba(0,0,0,0.24);
@@ -336,26 +336,30 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
     font-size: 1.3vw;
   }
   text {
-    stroke: #333;
+    stroke: #37474F;
+    fill: #37474F;
     font-weight: 400;
+    font-size: 1vmax;
   }
   #current-reading {
     font-size: 3vw;
     text-anchor: start;
+    alignment-baseline: hanging
   }
   #accum {
     font-size: 3vw;
     text-anchor: end;
+    alignment-baseline: hanging
   }
   #background {
-    fill: white
+    fill: #F9FCFE
   }
   #menu {
     fill: #DFE3E4;
   }
   .menu-option {
-    stroke: #333;
-    fill: #333;
+    stroke: #37474F;
+    fill: #37474F;
     font-size: 1.5vw;
     cursor: pointer;
   }
@@ -363,9 +367,9 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
 </head>
 <body><?php
 if ($title_img || $title_txt) {
-  echo '<div class="Grid Grid--gutters Grid--center">';
+  echo '<div class="Grid Grid--gutters Grid--center" style=\'margin:0px\'>';
   if ($title_img) {
-    echo "<div class='Grid-cell' style='flex: 0 0 8%;padding-left:0px;'><img src='https://placehold.it/150x150' /></div>";
+    echo "<div class='Grid-cell' style='flex: 0 0 8%;padding:0px;'><img src='https://placehold.it/150x150' /></div>";
   }
   if ($title_txt) {
     echo "<div class='Grid-cell'><h1 style='display:inline'>".$meter->getBuildingName($meter0).' '.$meter->getName($meter0)."</h1></div>";
@@ -373,7 +377,7 @@ if ($title_img || $title_txt) {
   echo '</div>';
 }
 ?>
-<div class="Grid" style="display:flex;justify-content: space-between;">
+<div class="Grid" style="display:flex;justify-content: space-between;margin: 1.3vw 0px 0px 0px">
   <div>
     <a href="#" id="chart-overlay" class="btn">Graph overlay</a>
     <ul class="dropdown" style="display: none" id="chart-dropdown">
@@ -419,7 +423,7 @@ if ($title_img || $title_txt) {
     </linearGradient>
   </defs>
   <rect id="background" />
-  <text x="-300" y="35%" transform="translate(0)rotate(-90 10 175)" font-size="11" fill="#333"><?php echo $units0; ?></text>
+  <image id="fishbg" xlink:href="" style="display:none"></image>
   <image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image>
 </svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
@@ -495,7 +499,7 @@ charachter.setAttribute('x', svg_width - charachter_width);
 charachter.setAttribute('y', svg_height-charachter_height-margin.bottom);
 charachter.setAttribute('width', charachter_width);
 charachter.setAttribute('height', charachter_height);
-var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/3,
+var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     button_offset = margin.right/5,
     current_state = 0;
 svg.append('rect').attr('id', 'menu').attr('y', svg_height-charachter_height-margin.bottom-(menu_height)).attr('x', svg_width - charachter_width).attr('width', charachter_width).attr('height', menu_height);
@@ -504,6 +508,7 @@ svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr
 svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset*3)).attr('width', charachter_width).text('CO2').attr('class', 'menu-option').attr('data-option', 2).on('click', menu_click);
 svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - charachter_width + (button_offset*4)).attr('width', charachter_width).text('$').attr('class', 'menu-option').attr('data-option', 3).on('click', menu_click);
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
+svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>');
 var bg = document.getElementById('background');
 bg.setAttribute('width', chart_width);
 bg.setAttribute('height', chart_height);
@@ -559,7 +564,8 @@ svg.append("g")
   .call(yaxis)
   .attr("transform", "translate("+margin.left+","+margin.top+")");
 // change charachter frame when mouse moves
-var image = d3.select('#charachter');
+var image = d3.select('#charachter'),
+    fishbg = d3.select('#fishbg');
 // indicator ball
 var circle = svg.append("circle")
   .attr("cx", -100)
@@ -573,16 +579,32 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr('id', 'hover-space')
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
-var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', 50);
-var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', 50);
-svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', 80).attr('text-anchor', 'start').text("<?php echo $units0 ?>");
-var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', 80).attr('text-anchor', 'end').text("Kilowatt-hours today");
+var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4);
+var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4);
+svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>");
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today");
+
 var timeout = null,
+    timeout2 = null,
     interval = null;
+function control_center() {
+  clearTimeout(timeout);
+  clearTimeout(timeout2);
+  clearInterval(interval);
+  fishbg.attr('style', 'display:none');
+  if (Math.random() > 0.9) { // Randomly either play through the data or play movie
+    play_data();
+  } else {
+    play_movie();
+  }
+}
+control_center();
+
 function mousemoved() {
   clearTimeout(timeout);
+  clearTimeout(timeout2);
   clearInterval(interval);
-  timeout = setTimeout(play_data, 3000);
+  timeout = setTimeout(control_center, 3000);
   var m = d3.mouse(this),
       p = closestPoint(current_path.node(), m);
   circle.attr("cx", p['x']).attr("cy", p['y']);
@@ -590,7 +612,7 @@ function mousemoved() {
   var index = Math.round(imgScale(frac));
   // console.log(index) this may not be the right thing to use
   if (orb_values[index] !== undefined) {
-    image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+orb_values[index]+".gif");
+    animate_to(orb_values[index]);
   }
   current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
   var total_kw = 0,
@@ -603,16 +625,90 @@ function mousemoved() {
   }
   accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
 }
-function menu_click() {
-  current_state = parseInt(this.getAttribute('data-option'));
-  if (current_state === 0 || current_state === 1) {
-    accum_units.text('Kilowatt-hours today');
-  } else if (current_state === 2) {
-    accum_units.text('Pounds of CO2 today');
-  } else if (current_state === 3) {
-    accum_units.text('Dollars spent today');
+
+var total_kw = 0,
+    kw_count = 0;
+for (var i = values[0].length - 1; i >= 0; i--) {
+  if (values[0][i] !== null) {
+    total_kw += values[0][i];
+    kw_count++;
   }
 }
+var avg_kw_at_end = total_kw/kw_count,
+    time_elapsed = (times[times.length-1].getTime()/1000)-(times[0].getTime()/1000),
+    kwh_anim = svg.append('g').attr('style', 'display:none');
+function menu_click() {
+  current_state = parseInt(this.getAttribute('data-option'));
+  accum.text(accumulation(time_elapsed, avg_kw_at_end, current_state));
+  if (current_state === 0) {
+    accum_units.text('Kilowatt-hours today');
+    kwh_anim.attr('style', 'display:none');
+  } else if (current_state === 1) {
+    accum_units.text('Kilowatt-hours today');
+    kwh_anim.attr('style', '');
+  } else if (current_state === 2) {
+    accum_units.text('Pounds of CO2 today');
+    kwh_anim.attr('style', 'display:none');
+  } else if (current_state === 3) {
+    accum_units.text('Dollars spent today');
+    kwh_anim.attr('style', 'display:none');
+  }
+}
+// draw kwh animation background
+kwh_anim.append('rect').attr('width', charachter_width).attr('height', chart_height/2).attr('x', chart_width + margin.left).attr('y', svg_height - margin.bottom - charachter_height).attr('fill', '#B4E3F4');
+kwh_anim.append('rect').attr('width', charachter_width).attr('height', chart_height).attr('x', chart_width + margin.left).attr('y', '67%').attr('fill', 'rgb(129, 176, 64)');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '49%');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '54%');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '56%');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
+var grass = kwh_anim.append('g');
+grass.append('polygon').attr('fill', '#fff').attr('points', '844.979,307.962 833.616,307.962 835.062,305.668 844.979,305.668');
+grass.append('polygon').attr('fill', '#fff').attr('points', '824.112,305.668 833.944,305.668 832.524,307.962 824.112,307.962');
+grass.append('polygon').attr('fill', '#fff').attr('points', '823.266,305.668 823.266,307.962 818.732,307.962 818.732,305.668');
+grass.append('polygon').attr('fill', '#fff').attr('points', '817.831,307.962 809.42,307.962 807.727,305.668 817.831,305.668');
+grass.append('path').attr('fill', '#fff').attr('points', 'M792.896,305.668h13.709l1.722,2.294h-15.239C792.614,307.907,792.552,307.143,792.896,305.668z');
+grass.append('polygon').attr('fill', '#fff').attr('points', '845.359,299.36 824.112,299.36 824.112,297.147 845.359,297.147');
+grass.append('polygon').attr('fill', '#fff').attr('points', '818.732,299.36 818.732,297.147 823.266,297.147 823.266,299.36');
+grass.append('path').attr('fill', '#fff').attr('points', 'M817.831,299.36h-14.638l-0.792-1.175c-0.164-0.218-0.355-0.236-0.574-0.054             c-0.272,0.164-0.318,0.354-0.136,0.573l0.382,0.656h-8.575c-0.528-0.037-0.592-0.774-0.191-2.212h24.524V299.36             L817.831,299.36z');
+grass.append('path').attr('fill', '#231F20').attr('points', 'M846.22,299.363c0.312,0.044,0.459,0.196,0.459,0.459c0.044,0.307-0.086,0.459-0.393,0.459h-8.33             l-2.36,4.524h9.707c0.396,0,0.546,0.197,0.458,0.591l0.065,0.262v2.295c0.307,0,0.46,0.153,0.46,0.459             c0.043,0.306-0.089,0.46-0.396,0.46h-12.852c-4.11,5.684-7.083,10.012-8.918,12.984v85.772c0,0.229-0.11,0.373-0.329,0.459             c-0.219,0.043-0.373,0-0.459-0.131l-0.066-0.262v-84.272l-0.062,0.065c-0.131,0.22-0.329,0.285-0.591,0.197             c-0.312-0.138-0.372-0.329-0.196-0.597l0.854-1.438V308.87h-4.524v12.329l0.787,1.377c0.175,0.262,0.131,0.479-0.131,0.656             c-0.229,0.175-0.415,0.13-0.591-0.137l-0.065-0.132v84.664c1.442,0.744,2.711,0.787,3.805,0.131             c0.131-0.087,0.271-0.104,0.396-0.062c0.132,0.043,0.22,0.131,0.263,0.262c0.088,0.218,0.043,0.396-0.131,0.525             c-1.399,0.875-2.932,0.875-4.592,0c-0.354,0.175-0.566,0.087-0.654-0.271l-0.197-0.13c-0.175-0.131-0.229-0.307-0.188-0.521             c0.045-0.271,0.176-0.368,0.396-0.324V321.46c-1.925-3.146-4.876-7.345-8.854-12.591h-16.33c-0.188,0-0.312-0.088-0.396-0.263             c-0.604-0.396-0.689-1.376-0.262-2.953c-0.219-0.087-0.308-0.262-0.264-0.524c0-0.219,0.132-0.329,0.395-0.329h13.837             l-3.214-4.524h-9.707c-0.173,0-0.305-0.087-0.394-0.262c-0.567-0.394-0.655-1.377-0.271-2.952             c-0.219-0.088-0.307-0.262-0.262-0.524c0-0.22,0.131-0.329,0.394-0.329h25.313v-2.688c0-0.307,0.15-0.459,0.459-0.459             c0-0.175,0.088-0.329,0.263-0.46c0.699-0.306,1.944-0.458,3.737-0.458c0.307,0,0.479,0.131,0.521,0.393             c0.048,0.439,0.193,1.049,0.456,1.837v-0.853c0-0.307,0.152-0.459,0.459-0.459c0.271-0.044,0.396,0.087,0.396,0.393v2.754             H845.7c0.394,0,0.547,0.197,0.459,0.59l0.132,0.262v2.231L846.22,299.363z M845.368,297.134h-21.247v2.229h21.247V297.134z              M844.974,305.659h-9.896l-1.441,2.295h11.353L844.974,305.659L844.974,305.659z M836.974,300.282H824.12v4.524h10.427             C835.683,302.795,836.492,301.287,836.974,300.282z M833.957,305.659h-9.837v2.295h8.394L833.957,305.659z M822.35,294.444             l-0.396-1.376c-1.398,0-2.425,0.13-3.081,0.393l-0.132,0.066v2.688h4.521v-1.804c-0.01,0.285-0.162,0.426-0.459,0.426             C822.546,294.883,822.392,294.75,822.35,294.444z M818.741,299.363h4.521v-2.229h-4.521V299.363z M818.741,307.954h4.521             v-2.295h-4.521V307.954z M823.267,300.282h-4.521v4.524h4.521V300.282z M824.12,320.152c1.661-2.579,4.262-6.338,7.804-11.278             h-7.804V320.152z M817.824,297.134h-24.526c-0.396,1.442-0.329,2.186,0.196,2.229h8.591l-0.394-0.656             c-0.188-0.217-0.145-0.415,0.131-0.59c0.219-0.174,0.415-0.153,0.59,0.066l0.787,1.18h14.624L817.824,297.134L817.824,297.134             z M806.61,305.659h-13.708c-0.354,1.487-0.283,2.252,0.188,2.295h15.225L806.61,305.659z M809.43,307.954h8.396v-2.295             h-10.104L809.43,307.954z M817.824,300.282h-13.969l3.214,4.524h10.755V300.282z M817.824,319.758v-10.885h-7.738             C813.496,313.376,816.075,317.005,817.824,319.758z');
+grass.append('path').attr('fill', '#fff').attr('points', 'M823.266,308.863v12.809l-0.847,1.42c-0.182,0.273-0.118,0.479,0.191,0.604             c0.255,0.09,0.455,0.021,0.601-0.191l0.055-0.083V407.7l0.062,0.271h-0.109c-0.055-0.127-0.146-0.218-0.271-0.271             c-0.128-0.036-0.268-0.009-0.396,0.082c-1.092,0.646-2.354,0.604-3.812-0.146v-84.654l0.082,0.104             c0.164,0.273,0.354,0.318,0.562,0.136c0.273-0.165,0.318-0.382,0.146-0.648l-0.792-1.366v-12.344L823.266,308.863             L823.266,308.863z');
+grass.append('path').attr('fill', '#fff').attr('points', 'M823.266,296.219h-4.521v-2.704l0.137-0.054c0.655-0.256,1.688-0.383,3.086-0.383l0.382,1.366             c0.062,0.309,0.211,0.437,0.471,0.382c0.312,0,0.459-0.124,0.469-0.37L823.266,296.219L823.266,296.219z');
+var powerlines = kwh_anim.append('g').attr('transform', 'translate(550,100)');
+powerlines.append('path').attr('d', 'M886.57,361.189v0.104l-0.771,0.848c0.164-0.018,0.246,0.036,0.246,0.164c-0.055-0.019-0.062,0-0.021,0.062         c-0.138,0.055-0.282,0.091-0.477,0.104l-7.312-0.021l-3.578,1.639l8.548,0.054c0.292,0,0.364,0.098,0.219,0.273l-0.812,0.979         c0.229-0.018,0.312,0.036,0.244,0.165c-0.107,0.098-0.271,0.144-0.489,0.144l-11.361-0.062         c-5.681,2.149-9.877,3.814-12.59,4.998l-34.028,36.869c-0.128,0.073-0.291,0.154-0.486,0.246l-0.402-0.104h-0.146         c-0.029,0.067-0.137,0.146-0.3,0.225c-0.966,0.128-1.814,0.255-2.562,0.382c-0.781-0.073-1.477-0.2-2.059-0.382         c-0.454,0.056-0.629,0.018-0.52-0.108h-0.164c-0.188-0.104-0.188-0.21,0-0.301c0.127-0.164,0.328-0.229,0.602-0.188         l34.574-36.896c-0.638-1.188-1.757-2.787-3.354-4.812l-14.609-0.104c-0.2-0.062-0.282-0.104-0.245-0.144         c-0.292-0.104-0.292-0.271,0-0.485c0.146-0.2,0.438-0.4,0.874-0.604c-0.164-0.072-0.2-0.136-0.104-0.188         c-0.021-0.036,0.01-0.045,0.08-0.027c0.06-0.108,0.221-0.146,0.483-0.108l12.289,0.062l-1.199-1.694l-8.566-0.054         c-0.199-0.021-0.291-0.063-0.271-0.139c-0.382-0.187-0.091-0.55,0.874-1.097c-0.184-0.054-0.195-0.116-0.057-0.188         c0.057-0.128,0.221-0.175,0.491-0.144l22.34,0.191l0.955-1.01c0.058-0.128,0.229-0.188,0.548-0.165         c0.021-0.073,0.146-0.144,0.384-0.191c0.689-0.104,1.839-0.152,3.438-0.137c0.221-0.036,0.312,0.009,0.303,0.137         c-0.128,0.146-0.188,0.382-0.188,0.71l0.245-0.328c0.07-0.146,0.271-0.195,0.573-0.164c0.198-0.031,0.28,0.015,0.244,0.143         l-1.019,1.01l18.95,0.107C886.635,360.962,886.697,361.043,886.57,361.189z M864.449,364.057l9.229,0.081         c1.657-0.776,2.896-1.338,3.688-1.666l-11.279-0.136L864.449,364.057z M865.296,362.391l-3.987-0.081l-1.584,1.748l4.021,0.027         L865.296,362.391z M860.517,362.282l-12.344-0.082l1.174,1.771l9.531,0.061L860.517,362.282z M859.042,369.929         c2.386-1.02,6.045-2.442,10.979-4.289l-6.977-0.054L859.042,369.929z M857.458,365.586l-6.909-0.056         c1.383,1.729,2.376,3.141,2.979,4.229L857.458,365.586z').attr('opacity', 0.2);
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '844.979,307.962 833.616,307.962 835.062,305.668 844.979,305.668');
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '824.112,305.668 833.944,305.668 832.524,307.962 824.112,307.962');
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '823.266,305.668 823.266,307.962 818.732,307.962 818.732,305.668');
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '817.831,307.962 809.42,307.962 807.727,305.668 817.831,305.668');
+powerlines.append('path').attr('fill', '#fff').attr('d', 'M792.896,305.668h13.709l1.722,2.294h-15.239C792.614,307.907,792.552,307.143,792.896,305.668z');
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '845.359,299.36 824.112,299.36 824.112,297.147 845.359,297.147');
+powerlines.append('polygon').attr('fill', '#fff').attr('points', '818.732,299.36 818.732,297.147 823.266,297.147 823.266,299.36');
+powerlines.append('path').attr('fill', '#fff').attr('d', 'M817.831,299.36h-14.638l-0.792-1.175c-0.164-0.218-0.355-0.236-0.574-0.054             c-0.272,0.164-0.318,0.354-0.136,0.573l0.382,0.656h-8.575c-0.528-0.037-0.592-0.774-0.191-2.212h24.524V299.36             L817.831,299.36z');
+powerlines.append('path').attr('fill', '#231F20').attr('d', 'M846.22,299.363c0.312,0.044,0.459,0.196,0.459,0.459c0.044,0.307-0.086,0.459-0.393,0.459h-8.33             l-2.36,4.524h9.707c0.396,0,0.546,0.197,0.458,0.591l0.065,0.262v2.295c0.307,0,0.46,0.153,0.46,0.459             c0.043,0.306-0.089,0.46-0.396,0.46h-12.852c-4.11,5.684-7.083,10.012-8.918,12.984v85.772c0,0.229-0.11,0.373-0.329,0.459             c-0.219,0.043-0.373,0-0.459-0.131l-0.066-0.262v-84.272l-0.062,0.065c-0.131,0.22-0.329,0.285-0.591,0.197             c-0.312-0.138-0.372-0.329-0.196-0.597l0.854-1.438V308.87h-4.524v12.329l0.787,1.377c0.175,0.262,0.131,0.479-0.131,0.656             c-0.229,0.175-0.415,0.13-0.591-0.137l-0.065-0.132v84.664c1.442,0.744,2.711,0.787,3.805,0.131             c0.131-0.087,0.271-0.104,0.396-0.062c0.132,0.043,0.22,0.131,0.263,0.262c0.088,0.218,0.043,0.396-0.131,0.525             c-1.399,0.875-2.932,0.875-4.592,0c-0.354,0.175-0.566,0.087-0.654-0.271l-0.197-0.13c-0.175-0.131-0.229-0.307-0.188-0.521             c0.045-0.271,0.176-0.368,0.396-0.324V321.46c-1.925-3.146-4.876-7.345-8.854-12.591h-16.33c-0.188,0-0.312-0.088-0.396-0.263             c-0.604-0.396-0.689-1.376-0.262-2.953c-0.219-0.087-0.308-0.262-0.264-0.524c0-0.219,0.132-0.329,0.395-0.329h13.837             l-3.214-4.524h-9.707c-0.173,0-0.305-0.087-0.394-0.262c-0.567-0.394-0.655-1.377-0.271-2.952             c-0.219-0.088-0.307-0.262-0.262-0.524c0-0.22,0.131-0.329,0.394-0.329h25.313v-2.688c0-0.307,0.15-0.459,0.459-0.459             c0-0.175,0.088-0.329,0.263-0.46c0.699-0.306,1.944-0.458,3.737-0.458c0.307,0,0.479,0.131,0.521,0.393             c0.048,0.439,0.193,1.049,0.456,1.837v-0.853c0-0.307,0.152-0.459,0.459-0.459c0.271-0.044,0.396,0.087,0.396,0.393v2.754             H845.7c0.394,0,0.547,0.197,0.459,0.59l0.132,0.262v2.231L846.22,299.363z M845.368,297.134h-21.247v2.229h21.247V297.134z              M844.974,305.659h-9.896l-1.441,2.295h11.353L844.974,305.659L844.974,305.659z M836.974,300.282H824.12v4.524h10.427             C835.683,302.795,836.492,301.287,836.974,300.282z M833.957,305.659h-9.837v2.295h8.394L833.957,305.659z M822.35,294.444             l-0.396-1.376c-1.398,0-2.425,0.13-3.081,0.393l-0.132,0.066v2.688h4.521v-1.804c-0.01,0.285-0.162,0.426-0.459,0.426             C822.546,294.883,822.392,294.75,822.35,294.444z M818.741,299.363h4.521v-2.229h-4.521V299.363z M818.741,307.954h4.521             v-2.295h-4.521V307.954z M823.267,300.282h-4.521v4.524h4.521V300.282z M824.12,320.152c1.661-2.579,4.262-6.338,7.804-11.278             h-7.804V320.152z M817.824,297.134h-24.526c-0.396,1.442-0.329,2.186,0.196,2.229h8.591l-0.394-0.656             c-0.188-0.217-0.145-0.415,0.131-0.59c0.219-0.174,0.415-0.153,0.59,0.066l0.787,1.18h14.624L817.824,297.134L817.824,297.134             z M806.61,305.659h-13.708c-0.354,1.487-0.283,2.252,0.188,2.295h15.225L806.61,305.659z M809.43,307.954h8.396v-2.295             h-10.104L809.43,307.954z M817.824,300.282h-13.969l3.214,4.524h10.755V300.282z M817.824,319.758v-10.885h-7.738             C813.496,313.376,816.075,317.005,817.824,319.758z');
+powerlines.append('path').attr('fill', '#fff').attr('d', 'M823.266,308.863v12.809l-0.847,1.42c-0.182,0.273-0.118,0.479,0.191,0.604             c0.255,0.09,0.455,0.021,0.601-0.191l0.055-0.083V407.7l0.062,0.271h-0.109c-0.055-0.127-0.146-0.218-0.271-0.271             c-0.128-0.036-0.268-0.009-0.396,0.082c-1.092,0.646-2.354,0.604-3.812-0.146v-84.654l0.082,0.104             c0.164,0.273,0.354,0.318,0.562,0.136c0.273-0.165,0.318-0.382,0.146-0.648l-0.792-1.366v-12.344L823.266,308.863             L823.266,308.863z');
+powerlines.append('path').attr('fill', '#fff').attr('d', 'M823.266,296.219h-4.521v-2.704l0.137-0.054c0.655-0.256,1.688-0.383,3.086-0.383l0.382,1.366             c0.062,0.309,0.211,0.437,0.471,0.382c0.312,0,0.459-0.124,0.469-0.37L823.266,296.219L823.266,296.219z');
+powerlines.append('path').attr('d', 'M624.023,200.2c64.021,63.933,133.396,96.833,208.1,98.7').attr('fill', 'none').attr('stroke', '#000').attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('stroke-miterlimit', '3');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
+// end kwh animation
+
+var frames = [],
+    last_frame = 0;
+function animate_to(frame) {
+  if (frame > last_frame) {
+    while (++last_frame < frame) {
+      frames.push(last_frame);
+    }
+  } else if (frame < last_frame) {
+    while (--last_frame > frame) {
+      frames.push(last_frame);
+    }
+  }
+}
+setInterval(function() { // outside is best for performance
+  if (frames.length > 0) {
+    image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+frames.shift()+".gif");
+  }
+}, 8);
+
 function play_data() {
   var end_i = Math.floor(current_path.node().getBBox().width),
       i = 0, total_kw = 0;
@@ -620,6 +716,10 @@ function play_data() {
     var p = closestPoint(current_path.node(), [i, -1]); // -1 is a dummy value
     circle.attr("cx", p['x']).attr("cy", p['y']);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
+    var index = Math.round(imgScale(i/end_i));
+    if (orb_values[index] !== undefined) {
+      animate_to(orb_values[index]);
+    }
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
@@ -627,9 +727,40 @@ function play_data() {
     if (i >= end_i) {
       clearInterval(interval);
     }
-  }, 30);
+  }, 35);
 }
-play_data();
+
+function httpGetAsync(theUrl, callback)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+    }
+    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+    xmlHttp.send(null);
+}
+var movies_played = 0;
+function play_movie() {
+  frames = [];
+  var frac = circle.attr('cx')/current_path.node().getBBox().width,
+      index = Math.round(imgScale(frac));
+  if (orb_values[index] !== undefined) {
+    var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100) + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
+    httpGetAsync(url, function(response) {
+      var split = response.split('$SEP$');
+      var len = split[1];
+      var name = split[0];
+      var fishbg_name = split[2];
+      image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
+      if (fishbg_name != 'none') {
+        fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").attr('style', '');
+      }
+      timeout2 = setTimeout(control_center, len);
+    });
+  }
+}
+
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
   // var mouseDate = xScale.invert(point[0]);
@@ -656,6 +787,7 @@ function closestPoint(pathNode, point) {
   }
   return pos
 }
+
 function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
   // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
@@ -665,8 +797,15 @@ function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   else if (current_state === 2) {
     return Math.round(kwh*1.22).toLocaleString(); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
   } else if (current_state === 3) {
-    return Math.round(kwh*0.11).toLocaleString(); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
+    return '$' + Math.round(kwh*0.11).toLocaleString(); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
   }
+}
+
+function convertRange(val, old_min, old_max, new_min, new_max) {
+  if (old_max == old_min) {
+    return 0;
+  }
+  return (((new_max - new_min) * (val - old_min)) / (old_max - old_min)) + new_min;
 }
 </script>
 </body>
