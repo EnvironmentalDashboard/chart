@@ -256,3 +256,96 @@ h1 {
     padding: 2em 0 0 2em;
   }
 }
+
+
+
+body {
+  background: #ECEFF1;
+}
+svg {
+  /*outline: 1px solid red;*/
+  /*margin: 40px 0px 0px 25px;*/
+  margin-top: 1.5vw;
+  /*padding: 20px 0px 20px 0px;*/
+  background: #ECEFF1;
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.12), 0 -1px 2px rgba(0,0,0,0.24);
+}
+.Grid {
+  margin-left: 5px;
+}
+.domain {
+  display: none;
+}
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+#hover-space {
+  fill: none;
+  cursor: crosshair;
+  pointer-events: all;
+}
+.btn {
+  text-decoration: none;
+  padding: 7px 20px;
+  padding: .7vw 2vw;
+  margin: 0px
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  /*color: #333;*/
+  color: #fff;
+  border-radius: 2px;
+  background: #3498db;
+  font-size: 1.4vw;
+}
+.dropdown {
+  position: absolute;
+  list-style: none;
+  padding: 7px 20px;
+  padding: .7vw 2vw;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  background: #fff;
+  margin-top: 13px;
+  padding: 0px
+}
+.dropdown li {
+  padding: 8px 16px;
+  color: #333;
+  text-align: center;
+}
+.dropdown li:hover {
+  background: #3498db;
+  color: #fff;
+}
+.dropdown a {
+  text-decoration: none;
+  font-size: 1.3vw;
+}
+text {
+  stroke: #37474F;
+  fill: #37474F;
+  font-weight: 400;
+  font-size: 1vmax;
+}
+#current-reading {
+  font-size: 3vw;
+  text-anchor: start;
+  alignment-baseline: hanging
+}
+#accum {
+  font-size: 3vw;
+  text-anchor: end;
+  alignment-baseline: hanging
+}
+#background {
+  fill: #F9FCFE
+}
+.menu-option {
+  fill: #DFE3E4;
+  cursor: pointer;
+}
+.menu-text {
+  stroke: #37474F;
+  fill: #37474F;
+  font-size: 1.5vw;
+  cursor: pointer;;
+}
