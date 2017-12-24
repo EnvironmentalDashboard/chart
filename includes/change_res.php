@@ -1,5 +1,5 @@
 <?php
-function change_res($data, $result_size, $error_val = null) {
+function change_res($data, $result_size) {
   $count = count($data);
   $return = [];
   if (!$count) {

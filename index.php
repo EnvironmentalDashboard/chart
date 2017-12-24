@@ -13,6 +13,7 @@ define('QUARTERHOUR', 900);
 define('HOUR', 3600);
 define('DAY', 86400);
 define('WEEK', 604800);
+$log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
 if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
@@ -35,8 +36,8 @@ for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extra
   $$var_name = false;
 }
 // other expected GET parameters
-$title_img = true;//false;
-$title_txt = true;//false;
+$title_img = false;
+$title_txt = false;
 $start = 0;
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
@@ -147,7 +148,7 @@ if ($typical_time_frame) {
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ?
     AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ('.implode(',', $days).') AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . intval($npoints)*24*4); // npoints*24*4 = 4 points per hour, 24 per day
+    ORDER BY recorded DESC LIMIT ' . intval($npoints)*24*4); // to get npoints days of quarterhour data, npoints*24*4 = 4 points per hour, 24 per day
     $stmt->execute([$meter0, 'quarterhour', $from]);
     foreach (array_reverse($stmt->fetchAll()) as $row) { // need to order by DESC for the LIMIT to select the most recent records but actually we want it to be ASC
       $day_of_week = date('w', $row['recorded']);
@@ -156,6 +157,10 @@ if ($typical_time_frame) {
       }
       $prev_lines[$prev_linesi][] = (float) $row['value'];
       $last = $day_of_week;
+    }
+    if ($prev_linesi+1 !== $npoints) {
+      $log[] = "Not enough data to calculate a median line using the previous {$npoints} typical days; using the previous " . ($prev_linesi+1) . " typical days instead";
+      $npoints = $prev_linesi + 1;
     }
     for ($i=0; $i < $npoints; $i++) { // make sure all arrays are same size
       $prev_lines[$i] = change_res($prev_lines[$i], $num_points);
@@ -184,7 +189,7 @@ if ($typical_time_frame) {
     $stmt = $db->prepare( // https://stackoverflow.com/a/7786588/2624391
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . $npoints*24*7);
+    ORDER BY recorded DESC LIMIT ' . $npoints*24*7); // to get npoints weeks of hour data, npoints*24*7 = 24 points per day, 7 days per week
     $stmt->execute([$meter0, 'hour', $from]);
     // echo "<!--";
     foreach (array_reverse($stmt->fetchAll()) as $row) { // need to reorder for same reason as above
@@ -195,7 +200,10 @@ if ($typical_time_frame) {
       $prev_lines[$prev_linesi][] = (float) $row['value'];
       $last = $day_of_week;
     }
-    $npoints = $prev_linesi;
+    if ($prev_linesi+1 !== $npoints) {
+      $log[] = "Not enough data to calculate a median line using the previous {$npoints} weeks; using the previous " . ($prev_linesi+1) . " weeks instead";
+      $npoints = $prev_linesi + 1;
+    }
     for ($i=0; $i < $npoints; $i++) { // make sure all arrays are same size
       $prev_lines[$i] = change_res($prev_lines[$i], $num_points);
     }
@@ -224,7 +232,7 @@ if ($typical_time_frame) {
       $sec += $inc;
     }
   }
-  // $prev_lines = null; // this is a pretty big variable, free for gc
+  $prev_lines = null; // this is a pretty big variable, free for gc
   // foreach ($prev_lines as $l) {
   //   $values[] = $l;
   // }
@@ -345,6 +353,7 @@ if ($title_img || $title_txt) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
+console.log(<?php echo json_encode($log); ?>);
 <?php if ($typical_time_frame) { ?>
 var typical_shown = false;
 document.getElementById('typical-toggle').addEventListener('click', function(e) {
@@ -405,7 +414,7 @@ if (svg_width < 2000) {
       charachter_height = 598;
 }
 var charachter = document.getElementById('charachter');
-var svg = d3.select('#svg'),
+var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet'),
     margin = {top: 25, right: charachter_width, bottom: 25, left: 40},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
@@ -665,8 +674,10 @@ function play_data() {
   var end_i = Math.floor(current_path.node().getBBox().width),
       i = 0, total_kw = 0;
   interval = setInterval(function() { // will go for end_i iterations
-    var p = closestPoint(current_path.node(), [i, -1]); // -1 is a dummy value
+    var p = closestPoint(current_path.node(), [i, -1]), // -1 is a dummy value
+        p2 = closestPoint(compared_path.node(), [i, -1]);
     circle.attr("cx", p['x']).attr("cy", p['y']);
+    circle2.attr("cx", p2['x']).attr("cy", p2['y']);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var index = Math.round(imgScale(i/end_i));
     animate_to(orb_values[index]);
