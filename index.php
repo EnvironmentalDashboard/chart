@@ -17,7 +17,9 @@ $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
 if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
-  $_GET['meter0'] = 415; // default meter
+  // $_GET['meter0'] = 415; // default meter
+  require 'create.php';
+  exit();
 }
 $charts = 0; // the number of $meter variables e.g. $meter0, $meter1, ...
 foreach ($_GET as $key => $value) { // count the number of charts
@@ -453,6 +455,7 @@ var areaGenerator = d3.area()
   .y0(chart_height)
   .curve(d3.curveCatmullRom); // smoothing
 var current_path = null,
+    current_path_len = 0,
     compared_path = null;
 values.forEach(function(curve, i) {
   // draw curve for each array in values
@@ -461,6 +464,7 @@ values.forEach(function(curve, i) {
   var path = path_g.append('path').attr('d', line);
   if (i === 0) {
     current_path = path;
+    current_path_len = current_path.node().getBBox().width;
   } else if (i === <?php echo ($typical_time_frame) ? $total_charts-1 : $total_charts; ?>) {
     compared_path = path;
   }
@@ -542,7 +546,6 @@ function control_center() {
     play_movie();
   }
 }
-control_center();
 
 function mousemoved() {
   clearTimeout(timeout);
@@ -550,23 +553,26 @@ function mousemoved() {
   clearInterval(interval);
   timeout = setTimeout(control_center, 3000);
   var m = d3.mouse(this),
-      p = closestPoint(current_path.node(), m),
+      // frac = m[0]/(chart_width*(values0length/values[0].length));
+      frac = m[0]/current_path_len;
+  if (frac < 1) {
+    var p = closestPoint(current_path.node(), m),
       p2 = closestPoint(compared_path.node(), m);
-  circle.attr("cx", p['x']).attr("cy", p['y']);
-  circle2.attr('cx', p2['x']).attr('cy', p2['y']);
-  var frac = m[0]/(chart_width*(values0length/values[0].length));
-  var index = Math.round(imgScale(frac));
-  animate_to(orb_values[index]);
-  current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
-  var total_kw = 0,
-      kw_count = 0,
-      index = values0Scale(frac);
-  // console.log(index/values0length);
-  for (var i = 0; i <= index; i++) {
-    total_kw += values[0][i];
-    kw_count++;
+    circle.attr("cx", p['x']).attr("cy", p['y']);
+    circle2.attr('cx', p2['x']).attr('cy', p2['y']);
+    var index = Math.round(imgScale(frac));
+    animate_to(orb_values[index]);
+    current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
+    var total_kw = 0,
+        kw_count = 0,
+        index = values0Scale(frac);
+    // console.log(index/values0length);
+    for (var i = 0; i <= index; i++) {
+      total_kw += values[0][i];
+      kw_count++;
+    }
+    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
   }
-  accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
 }
 
 var total_kw = 0,
@@ -683,7 +689,7 @@ setInterval(function() { // outside is best for performance
 }, 8);
 
 function play_data() {
-  var end_i = Math.floor(current_path.node().getBBox().width),
+  var end_i = Math.floor(current_path_len),
       i = 0, total_kw = 0;
   interval = setInterval(function() { // will go for end_i iterations
     var p = closestPoint(current_path.node(), [i, -1]), // -1 is a dummy value
@@ -702,11 +708,12 @@ function play_data() {
     }
   }, 35);
 }
+play_data(); // start by playing data
 
 var movies_played = 0;
 function play_movie() {
   frames = [];
-  var frac = circle.attr('cx')/current_path.node().getBBox().width,
+  var frac = circle.attr('cx')/current_path_len,
       index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
     var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);

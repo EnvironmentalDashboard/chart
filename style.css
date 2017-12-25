@@ -349,7 +349,3 @@ text {
   font-size: 1.5vw;
   cursor: pointer;
 }
-.active-option {
-  stroke: #3498db;
-  fill: #3498db;
-}
