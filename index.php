@@ -61,7 +61,7 @@ switch ($time_frame) {
     $xaxis_format = '%I:%M %p';
     $pct_thru = ($now - $from) / HOUR;
     $double_time = $from - HOUR;
-    $xaxis_ticks = 10;
+    $xaxis_ticks = 8;
     break;
   case 'week':
     if (date('w') === '0') { // If it is sunday
@@ -73,10 +73,10 @@ switch ($time_frame) {
     }
     $res = 'hour';
     $increment = HOUR;
-    $xaxis_format = '%m/%d %I %p';
+    $xaxis_format = '%A';
     $pct_thru = ($now - $from) / WEEK;
     $double_time = $from - WEEK;
-    $xaxis_ticks = 9;
+    $xaxis_ticks = 7;
     break;
   default://case 'day':
     $from = strtotime(date('Y-m-d') . " 00:00:00"); // Start of day
@@ -148,7 +148,7 @@ if ($typical_time_frame) {
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ?
     AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ('.implode(',', $days).') AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . intval($npoints)*24*4); // to get npoints days of quarterhour data, npoints*24*4 = 4 points per hour, 24 per day
+    ORDER BY recorded DESC LIMIT ' . (intval($npoints)*24*4)); // to get npoints days of quarterhour data, npoints*24*4 = 4 points per hour, 24 per day
     $stmt->execute([$meter0, 'quarterhour', $from]);
     foreach (array_reverse($stmt->fetchAll()) as $row) { // need to order by DESC for the LIMIT to select the most recent records but actually we want it to be ASC
       $day_of_week = date('w', $row['recorded']);
@@ -158,6 +158,7 @@ if ($typical_time_frame) {
       $prev_lines[$prev_linesi][] = (float) $row['value'];
       $last = $day_of_week;
     }
+    // die();
     if ($prev_linesi+1 !== $npoints) {
       $log[] = "Not enough data to calculate a median line using the previous {$npoints} typical days; using the previous " . ($prev_linesi+1) . " typical days instead";
       $npoints = $prev_linesi + 1;
@@ -189,7 +190,7 @@ if ($typical_time_frame) {
     $stmt = $db->prepare( // https://stackoverflow.com/a/7786588/2624391
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . $npoints*24*7); // to get npoints weeks of hour data, npoints*24*7 = 24 points per day, 7 days per week
+    ORDER BY recorded DESC LIMIT ' . ($npoints*24*7)); // to get npoints weeks of hour data, npoints*24*7 = 24 points per day, 7 days per week
     $stmt->execute([$meter0, 'hour', $from]);
     // echo "<!--";
     foreach (array_reverse($stmt->fetchAll()) as $row) { // need to reorder for same reason as above
@@ -272,7 +273,7 @@ if (!$typical_time_frame) { // charachter mood should be difference of current a
     $orb_values[] = Meter::convertRange($val, $min_diff, $max_diff, 0, $number_of_frames);
   }
 }
-if ($min > 0) { // && it's a resource that starts from 0
+if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
 }
 parse_str($_SERVER['QUERY_STRING'], $qs);
@@ -347,8 +348,6 @@ if ($title_img || $title_txt) {
     </linearGradient>
   </defs>
   <rect id="background" />
-  <image id="fishbg" xlink:href=""></image>
-  <image id="charachter" xlink:href="https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_18.gif"></image>
 </svg>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
@@ -406,24 +405,14 @@ for (var i = values[0].length-1; i >= 0; i--) { // calc real width
   }
   values0length--;
 }
-if (svg_width < 2000) {
-  var charachter_width = svg_width/5,
-      charachter_height = charachter_width*(598/449);
-} else {
-  var charachter_width = 449,
-      charachter_height = 598;
-}
-var charachter = document.getElementById('charachter');
-var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet'),
-    margin = {top: 25, right: charachter_width, bottom: 25, left: 40},
+var charachter_width = svg_width/5,
+    charachter_height = charachter_width*(598/449);
+var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet').attr('width', svg_width).attr('height', svg_height),
+    margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: svg_width/40},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-svg.attr('width', svg_width).attr('height', svg_height);
-charachter.setAttribute('x', svg_width - charachter_width);
-charachter.setAttribute('y', svg_height-charachter_height-margin.bottom);
-charachter.setAttribute('width', charachter_width);
-charachter.setAttribute('height', charachter_height);
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+    charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0;
 svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 0).on('click', menu_click); // smiley rect
@@ -431,18 +420,22 @@ svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_
 svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 2).on('click', menu_click); // co2 rect
 svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 3).on('click', menu_click); // $ rect
 // svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.91)).attr('width', charachter_width).text('☺').attr('class', 'menu-text').attr('data-option', 0).on('click', menu_click);
-var user_icon = svg.append('svg').attr('height', 25).attr('width', 25).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-30).attr('data-option', 0).on('click', menu_click);
+var user_icon = svg.append('svg').attr('height', svg_width*.016).attr('width', svg_width*.016).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.02)).attr('data-option', 0).on('click', menu_click);
 user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 286 71 348q0 181-70.5 347t-190.5 286-286 191.5-349 71.5-349-71-285.5-191.5-190.5-286-71-347.5 71-348 191-286 286-191 348-71zm619 1351q149-205 149-455 0-156-61-298t-164-245-245-164-298-61-298 61-245 164-164 245-61 298q0 250 149 455 66-327 306-327 131 128 313 128t313-128q240 0 306 327zm-235-647q0-159-112.5-271.5t-271.5-112.5-271.5 112.5-112.5 271.5 112.5 271.5 271.5 112.5 271.5-112.5 112.5-271.5z').attr('fill', '#37474F');
 svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
-svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.425)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
+svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
 svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
+
+<?php if ($charachter === 'fish') {
+  echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db');\n";
+} ?>
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
 svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>');
-var bg = document.getElementById('background');
-bg.setAttribute('width', chart_width);
-bg.setAttribute('height', chart_height);
-bg.setAttribute("transform", "translate(" + margin.left + "," + margin.top + ")");
+var bg = d3.select('#background');
+bg.attr('width', chart_width);
+bg.attr('height', chart_height);
+bg.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
@@ -497,23 +490,22 @@ svg.append("g")
   .call(yaxis)
   .attr("transform", "translate("+margin.left+","+margin.top+")");
 // change charachter frame when mouse moves
-var image = d3.select('#charachter'),
-    fishbg = d3.select('#fishbg').style('display', 'none').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width);
+var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width); // +2/+20 are weird hacks; image not sized right
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", 7).attr("stroke", color(0)).attr('stroke-width', 3).attr("fill", "#fff"),
     circle2 = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", 7).attr("stroke", color(1)).attr('stroke-width', 3).attr("fill", "#fff");
+  .attr("r", 7).attr("stroke", color(<?php echo $total_charts-1 ?>)).attr('stroke-width', 3).attr("fill", "#fff");
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)
   .attr('id', 'hover-space')
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
-var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0');
-var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0');
-svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>");
-var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today");
+var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
+var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
+svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw');
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today").style('font-size', '1.25vw');
 //draw legend
 var x = margin.left,
     i = 0;
@@ -666,7 +658,7 @@ function animate_to(frame) {
 }
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
-    image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+frames.shift()+".gif");
+    charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+frames.shift()+".gif");
   }
 }, 8);
 
@@ -691,34 +683,32 @@ function play_data() {
   }, 35);
 }
 
-function httpGetAsync(theUrl, callback)
-{
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
-    }
-    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
-    xmlHttp.send(null);
-}
 var movies_played = 0;
 function play_movie() {
   frames = [];
   var frac = circle.attr('cx')/current_path.node().getBBox().width,
       index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
-    var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100) + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
-    httpGetAsync(url, function(response) {
-      var split = response.split('$SEP$');
-      var len = split[1];
-      var name = split[0];
-      var fishbg_name = split[2];
-      image.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
-      if (fishbg_name != 'none') {
-        fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
+    var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
+    console.log(rv);
+    var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() {
+      if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+        var split = xmlHttp.responseText.split('$SEP$');
+        console.log(split);
+        var len = split[1];
+        var name = split[0];
+        var fishbg_name = split[2];
+        charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
+        if (fishbg_name != 'none') {
+          fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
+        }
+        timeout2 = setTimeout(play_data, len);
       }
-      timeout2 = setTimeout(play_data, len);
-    });
+    }
+    xmlHttp.open("GET", url, true); // true for asynchronous 
+    xmlHttp.send(null);
   }
 }
 
