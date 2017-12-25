@@ -340,7 +340,7 @@ text {
   fill: #F9FCFE
 }
 .menu-option {
-  fill: #DFE3E4;
+  fill: #37474F;
   cursor: pointer;
 }
 .menu-text {
@@ -348,4 +348,8 @@ text {
   fill: #37474F;
   font-size: 1.5vw;
   cursor: pointer;
+}
+.active-option {
+  stroke: #3498db;
+  fill: #3498db;
 }

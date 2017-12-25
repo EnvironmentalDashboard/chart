@@ -283,7 +283,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=<?php echo @time() ?>">
   <title>Time Series</title>
 </head>
 <body><?php
@@ -415,16 +415,15 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0;
-svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 0).on('click', menu_click); // smiley rect
-svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 1).on('click', menu_click); // kwh rect
-svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 2).on('click', menu_click); // co2 rect
-svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.065)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '6.5%').attr('data-option', 3).on('click', menu_click); // $ rect
-// svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.91)).attr('width', charachter_width).text('☺').attr('class', 'menu-text').attr('data-option', 0).on('click', menu_click);
+var icon_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 0).on('click', menu_click).style('fill', '#3498db');
+var kwh_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 1).on('click', menu_click);
+var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 2).on('click', menu_click);
+var $rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 3).on('click', menu_click);
 var user_icon = svg.append('svg').attr('height', svg_width*.016).attr('width', svg_width*.016).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.02)).attr('data-option', 0).on('click', menu_click);
-user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 286 71 348q0 181-70.5 347t-190.5 286-286 191.5-349 71.5-349-71-285.5-191.5-190.5-286-71-347.5 71-348 191-286 286-191 348-71zm619 1351q149-205 149-455 0-156-61-298t-164-245-245-164-298-61-298 61-245 164-164 245-61 298q0 250 149 455 66-327 306-327 131 128 313 128t313-128q240 0 306 327zm-235-647q0-159-112.5-271.5t-271.5-112.5-271.5 112.5-112.5 271.5 112.5 271.5 271.5 112.5 271.5-112.5 112.5-271.5z').attr('fill', '#37474F');
-svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
-svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
-svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
+var icon = user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 286 71 348q0 181-70.5 347t-190.5 286-286 191.5-349 71.5-349-71-285.5-191.5-190.5-286-71-347.5 71-348 191-286 286-191 348-71zm619 1351q149-205 149-455 0-156-61-298t-164-245-245-164-298-61-298 61-245 164-164 245-61 298q0 250 149 455 66-327 306-327 131 128 313 128t313-128q240 0 306 327zm-235-647q0-159-112.5-271.5t-271.5-112.5-271.5 112.5-112.5 271.5 112.5 271.5 271.5 112.5 271.5-112.5 112.5-271.5z').attr('fill', '#3498db');
+var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
+var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
+var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
 
 <?php if ($charachter === 'fish') {
   echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db');\n";
@@ -585,6 +584,19 @@ var avg_kw_at_end = total_kw/kw_count,
     co2_anim = svg.append('g').style('display', 'none'),
     money_anim = svg.append('g').style('display', 'none');
 function menu_click() {
+  if (current_state === 0) {
+    icon_rect.style('fill', '#37474F');
+    icon.style('fill', '#37474F');
+  } else if (current_state === 1) {
+    kwh_rect.style('fill', '#37474F');
+    kwh_text.style('fill', '#37474F');
+  } else if (current_state === 2) {
+    co2_rect.style('fill', '#37474F');
+    co2_text.style('fill', '#37474F');
+  } else if (current_state === 3) {
+    $rect.style('fill', '#37474F');
+    $text.style('fill', '#37474F');
+  }
   current_state = parseInt(this.getAttribute('data-option'));
   accum.text(accumulation(time_elapsed, avg_kw_at_end, current_state));
   if (current_state === 0) {
@@ -593,24 +605,32 @@ function menu_click() {
     co2_anim.style('display', 'none');
     money_anim.style('display', 'none');
     grass.style('display', 'none');
+    icon_rect.style('fill', '#3498db');
+    icon.style('fill', '#3498db');
   } else if (current_state === 1) {
     accum_units.text('Kilowatt-hours today');
     kwh_anim.style('display', 'initial');
     co2_anim.style('display', 'none');
     money_anim.style('display', 'none');
     grass.style('display', 'initial');
+    kwh_rect.style('fill', '#3498db');
+    kwh_text.style('fill', '#3498db');
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
     co2_anim.style('display', 'initial');
     money_anim.style('display', 'none');
     grass.style('display', 'initial');
+    co2_rect.style('fill', '#3498db');
+    co2_text.style('fill', '#3498db');
   } else if (current_state === 3) {
     accum_units.text('Dollars spent today');
     kwh_anim.style('display', 'none');
     co2_anim.style('display', 'none');
     money_anim.style('display', 'initial');
     grass.style('display', 'initial');
+    $rect.style('fill', '#3498db');
+    $text.style('fill', '#3498db');
   }
 }
 // draw backgrounds for different buttons in menu
