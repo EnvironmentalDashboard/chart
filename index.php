@@ -104,8 +104,16 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
   }
   $data = $meter->getDataFromTo($$var_name, $from, $to, $res, NULL_DATA);
   if (empty($data)) {
-    $$var_name = false;
-    continue;
+    if ($i === 0) { // if there's no data for meter0, we can't draw the chart
+      $error = $$var_name;
+      require "create.php";
+      exit();
+    } else { // just ignore it
+      $$var_name = false;
+      $charts--;
+      $log[] = "Meter {$$var_name} has no data";
+      continue;
+    }
   }
   foreach ($times as $time) {
     $best_guess = find_nearest($data, $time, NULL_DATA);
@@ -325,7 +333,7 @@ if ($title_img || $title_txt) {
       AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
       AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
       OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
-      echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))." class='btn'>{$related_meter['name']}</a>";
+      echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."' class='btn'>{$related_meter['name']}</a>";
     }
     foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
       AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
@@ -414,6 +422,9 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
+    <?php if ($charachter === 'fish') {
+    echo "blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db'),\n";
+    } ?>
     charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0;
@@ -426,10 +437,6 @@ var icon = user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 2
 var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
 var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
 var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
-
-<?php if ($charachter === 'fish') {
-  echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db');\n";
-} ?>
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
 svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>');

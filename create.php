@@ -30,8 +30,8 @@ $dropdown_html = "<optgroup label='Adam Joseph Lewis Center'><option value='2515
 </head>
 <body>
 <div style="width: 50%;min-width: 200px;margin: 0 auto;margin-top: 5%">
-  <h1>This time series is not configured.</h1>
-  <p>At minimium, a time series needs a meter ID to chart. Please select a meter from the list below:</p>
+  <h1><?php echo (isset($error)) ? "There are no data for meter {$error}, please select another" : 'This time series is not configured.' ?></h1>
+  <p>At minimum, a time series needs 1 meter ID to chart. Please select a meter from the list below:</p>
   <form action="index.php" method="GET">
     <div class="select" style="width: 100%">
       <select aria-label="Select a meter" name="meter0">
