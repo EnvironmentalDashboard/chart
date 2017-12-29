@@ -2,20 +2,7 @@
 error_reporting(-1);
 ini_set('display_errors', 'On');
 date_default_timezone_set('America/New_York');
-require_once '../includes/db.php';
-require_once '../includes/class.Meter.php';
-require_once 'includes/find_nearest.php';
-require_once 'includes/median.php';
-require_once 'includes/change_res.php';
-define('NULL_DATA', true); // set to false to fill in data
-define('MIN', 60);
-define('QUARTERHOUR', 900);
-define('HOUR', 3600);
-define('DAY', 86400);
-define('WEEK', 604800);
-$log = [];
-$meter = new Meter($db); // has methods to get data from db easily
-$now = time();
+// do this before importing/defining anything to whitelist select variables to be imported with extract()
 if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
   // $_GET['meter0'] = 415; // default meter
   require 'create.php';
@@ -43,6 +30,20 @@ $title_txt = false;
 $start = 0;
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
+require_once '../includes/db.php';
+require_once '../includes/class.Meter.php';
+require_once 'includes/find_nearest.php';
+require_once 'includes/median.php';
+require_once 'includes/change_res.php';
+define('NULL_DATA', true); // set to false to fill in data
+define('MIN', 60);
+define('QUARTERHOUR', 900);
+define('HOUR', 3600);
+define('DAY', 86400);
+define('WEEK', 604800);
+$log = [];
+$meter = new Meter($db); // has methods to get data from db easily
+$now = time();
 // fish or squirrel?
 $units0 = $meter->getUnits($meter0);
 $resource0 = $meter->getResourceType($meter0);
@@ -418,7 +419,7 @@ for (var i = values[0].length-1; i >= 0; i--) { // calc real width
 var charachter_width = svg_width/5,
     charachter_height = charachter_width*(598/449);
 var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet').attr('width', svg_width).attr('height', svg_height),
-    margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: svg_width/40},
+    margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: (svg_width/40)*<?php echo strlen(strval($max))/6 ?>},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
@@ -726,7 +727,7 @@ function play_movie() {
     var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
     console.log(rv);
     var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
-    var xmlHttp = new XMLHttpRequest();
+    var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391
     xmlHttp.onreadystatechange = function() {
       if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
         var split = xmlHttp.responseText.split('$SEP$');
