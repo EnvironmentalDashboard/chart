@@ -562,7 +562,7 @@ function control_center() {
   clearTimeout(timeout2);
   clearInterval(interval);
   fishbg.style('display', 'none');
-  if (Math.random() > 0.6) { // Randomly either play through the data or play movie
+  if (Math.random() > 0.6) { // randomly either play through the data or play movie
     play_data();
   } else {
     play_movie();
@@ -593,6 +593,7 @@ function mousemoved() {
       kw_count++;
     }
     accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
+    tree_leaves(frac, Math.floor(index));
   }
 }
 
@@ -606,10 +607,11 @@ for (var i = values[0].length - 1; i >= 0; i--) {
 }
 var avg_kw_at_end = total_kw/kw_count,
     time_elapsed = (times[times.length-1].getTime()/1000)-(times[0].getTime()/1000),
-    grass = svg.append('g').style('display', 'none'),
-    kwh_anim = svg.append('g').style('display', 'none'),
-    co2_anim = svg.append('g').style('display', 'none'),
-    money_anim = svg.append('g').style('display', 'none');
+    anim_container = svg.append('g'),
+    grass = anim_container.append('g').style('display', 'none'),
+    kwh_anim = anim_container.append('g').style('display', 'none'),
+    co2_anim = anim_container.append('g').style('display', 'none'),
+    money_anim = anim_container.append('g').style('display', 'none');
 function menu_click() {
   if (current_state === 0) {
     icon_rect.style('fill', '#37474F');
@@ -688,6 +690,23 @@ smoke_animation();
 
 money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
+var current_leaves = [];
+function tree_leaves(frac, index) {
+  current_leaves.forEach(function(leaf) {
+    leaf.remove();
+  });
+  current_leaves = [];
+  // var frac = circle.attr('cx')/current_path_len,
+  //     index = Math.round(imgScale(frac));
+  if (orb_values[index] !== undefined) {
+    var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
+    for (var i = Math.round(rv); i >= 0; i--) {
+      var leaf = money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+      current_leaves.push(leaf);
+    }
+  }
+  function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
+}
 // end kwh animation
 
 var frames = [],
@@ -710,6 +729,7 @@ setInterval(function() { // outside is best for performance
 }, 8);
 
 function play_data() {
+  anim_container.style('display', 'initial');
   var end_i = Math.floor(current_path_len),
       i = 0, total_kw = 0;
   interval = setInterval(function() { // will go for end_i iterations
@@ -720,6 +740,7 @@ function play_data() {
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var index = Math.round(imgScale(i/end_i));
     animate_to(orb_values[index]);
+    tree_leaves(i/end_i, index);
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
@@ -727,13 +748,14 @@ function play_data() {
     if (i >= end_i) {
       control_center();
     }
-  }, 35);
+  }, (1/end_i)*<?php echo 30000 * $pct_thru ?>); // (1/end_i)*7000 will make the loop go for 7 seconds
 }
 play_data(); // start by playing data
 
 var movies_played = 0;
 function play_movie() {
   frames = [];
+  anim_container.style('display', 'none');
   var frac = circle.attr('cx')/current_path_len,
       index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
