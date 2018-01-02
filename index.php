@@ -329,22 +329,26 @@ if ($title_img || $title_txt) {
     <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'day'])); ?>" class="btn">Day</a>
     <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'week'])); ?>" class="btn">Week</a>
   </div>
-  <div><?php 
-    foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
-      AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
-      AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
-      OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
-      echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."' class='btn'>{$related_meter['name']}</a>";
-    }
-    foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
-      AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
-      AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
-      ORDER BY units DESC') as $row) {
-        echo "<a class='btn' href='?";
-        echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
-        echo "'>{$row['resource']}</a> \n";
+  <div>
+    <a href="#" id="other-meters" class="btn">Other meters</a>
+    <ul class="dropdown" style="display: none" id="meters-dropdown">
+      <?php 
+      foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
+        AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
+        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
+        OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
+        echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
       }
-    ?>
+      foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
+        AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
+        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
+        ORDER BY units DESC') as $row) {
+          echo "<a href='?";
+          echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
+          echo "'><li>{$row['resource']}</li></a> \n";
+        }
+      ?>
+    </ul>
   </div>
 </div>
 <svg id="svg">
@@ -379,8 +383,8 @@ document.getElementById('typical-toggle').addEventListener('click', function(e) 
   }
 });
 <?php } ?>
-var dropdown_menu = document.getElementById('chart-dropdown');
-var dropdown_menu_shown = false;
+var dropdown_menu = document.getElementById('chart-dropdown'),
+    dropdown_menu_shown = false;
 document.getElementById('chart-overlay').addEventListener('click', function(e) {
   e.preventDefault();
   if (dropdown_menu_shown) {
@@ -391,7 +395,18 @@ document.getElementById('chart-overlay').addEventListener('click', function(e) {
     dropdown_menu_shown = true;
   }
 });
-var historical_shown = false;
+var dropdown_menu2 = document.getElementById('meters-dropdown'),
+    dropdown_menu2_shown = false;
+document.getElementById('other-meters').addEventListener('click', function(e) {
+  e.preventDefault();
+  if (dropdown_menu2_shown) {
+    dropdown_menu2.setAttribute('style', 'display:none');
+    dropdown_menu2_shown = false;
+  } else {
+    dropdown_menu2.setAttribute('style', '');
+    dropdown_menu2_shown = true;
+  }
+});
 document.getElementById('historical-toggle').addEventListener('click', function(e) {
   e.preventDefault();
   if (historical_shown) {
@@ -419,7 +434,7 @@ for (var i = values[0].length-1; i >= 0; i--) { // calc real width
 var charachter_width = svg_width/5,
     charachter_height = charachter_width*(598/449);
 var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet').attr('width', svg_width).attr('height', svg_height),
-    margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: (svg_width/40)*<?php echo strlen(strval($max))/6 ?>},
+    margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: svg_width/35},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
@@ -435,9 +450,9 @@ var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_hei
 var $rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 3).on('click', menu_click);
 var user_icon = svg.append('svg').attr('height', svg_width*.016).attr('width', svg_width*.016).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.02)).attr('data-option', 0).on('click', menu_click);
 var icon = user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 286 71 348q0 181-70.5 347t-190.5 286-286 191.5-349 71.5-349-71-285.5-191.5-190.5-286-71-347.5 71-348 191-286 286-191 348-71zm619 1351q149-205 149-455 0-156-61-298t-164-245-245-164-298-61-298 61-245 164-164 245-61 298q0 250 149 455 66-327 306-327 131 128 313 128t313-128q240 0 306 327zm-235-647q0-159-112.5-271.5t-271.5-112.5-271.5 112.5-112.5 271.5 112.5 271.5 271.5 112.5 271.5-112.5 112.5-271.5z').attr('fill', '#3498db');
-var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
-var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
-var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-10).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
+var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
+var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
+var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
 svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>');
@@ -446,6 +461,7 @@ bg.attr('width', chart_width);
 bg.attr('height', chart_height);
 bg.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 var color = d3.scaleOrdinal(d3.schemeCategory10);
+var format = d3.format('.3s');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
 var imgScale = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true); // do orb_values.length-1 instead of values0length?
@@ -477,9 +493,7 @@ values.forEach(function(curve, i) {
     compared_path = path;
   }
   path.attr("fill", "none").attr("stroke", color(i))
-    .attr("stroke-linejoin", "round")
-    .attr("stroke-linecap", "round")
-    .attr("stroke-width", 2);
+    .attr("stroke-width", svg_width/700);
   <?php echo ($typical_time_frame) ? 'if (i !== '.($total_charts-1).') {' : ''; ?>
   var area = areaGenerator(curve);
   path_g.append("path")
@@ -493,20 +507,20 @@ values.forEach(function(curve, i) {
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(<?php echo $xaxis_ticks; ?>, '<?php echo $xaxis_format ?>');
-var yaxis = d3.axisLeft(yScale).ticks(8);
+var yaxis = d3.axisLeft(yScale).ticks(8, "s");
 svg.append("g")
   .call(xaxis)
   .attr("transform", "translate("+margin.left+"," + (chart_height+margin.top) + ")");
 svg.append("g")
   .call(yaxis)
-  .attr("transform", "translate("+margin.left+","+margin.top+")");
+  .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks');
 // change charachter frame when mouse moves
 var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width); // +2/+20 are weird hacks; image not sized right
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", 7).attr("stroke", color(0)).attr('stroke-width', 3).attr("fill", "#fff"),
+  .attr("r", svg_width/200).attr("stroke", color(0)).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
     circle2 = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", 7).attr("stroke", color(<?php echo $total_charts-1 ?>)).attr('stroke-width', 3).attr("fill", "#fff");
+  .attr("r", svg_width/200).attr("stroke", color(<?php echo $total_charts-1 ?>)).attr('stroke-width', svg_width/500).attr("fill", "#fff");
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)
@@ -534,10 +548,10 @@ if ($typical_time_frame) {
 $legend[] = "Previous {$time_frame}";
 echo json_encode($legend);
 ?>.forEach(function(name) {
-  svg.append('rect').attr('y', 5).attr('x', x).attr('height', margin.top - 10).attr('width', margin.top - 10).attr('fill', color(i++));
+  svg.append('rect').attr('y', 5).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', color(i++));
   x += margin.top;
-  var el = svg.append('text').attr('y', margin.top - 7).attr('x', x).text(name);
-  x += el.node().getBBox().width + 10;
+  var el = svg.append('text').attr('y', margin.top / 1.5).attr('x', x).text(name);
+  x += el.node().getBBox().width + (svg_width/50);
 });
 
 var timeout = null,
@@ -574,7 +588,6 @@ function mousemoved() {
     var total_kw = 0,
         kw_count = 0,
         index = values0Scale(frac);
-    // console.log(index/values0length);
     for (var i = 0; i <= index; i++) {
       total_kw += values[0][i];
       kw_count++;
@@ -725,7 +738,7 @@ function play_movie() {
       index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
     var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
-    console.log(rv);
+    // console.log(rv);
     var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
     var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391
     xmlHttp.onreadystatechange = function() {
@@ -778,12 +791,12 @@ function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
   // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
   if (current_state === 0 || current_state === 1) {
-    return Math.round(kwh).toLocaleString(); // kWh = time elapsed in hours * kilowatts so far
+    return format(kwh); // kWh = time elapsed in hours * kilowatts so far
   }
   else if (current_state === 2) {
-    return Math.round(kwh*1.22).toLocaleString(); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
+    return format(kwh*1.22); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
   } else if (current_state === 3) {
-    return '$' + Math.round(kwh*0.11).toLocaleString(); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
+    return '$' + format(kwh*0.11); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
   }
 }
 

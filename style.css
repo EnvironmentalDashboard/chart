@@ -326,6 +326,9 @@ text {
   font-weight: 400;
   font-size: 1vmax;
 }
+#yaxis_ticks text {
+  font-size: 1.5vmax;
+}
 #current-reading {
   font-size: 3vw;
   text-anchor: start;
