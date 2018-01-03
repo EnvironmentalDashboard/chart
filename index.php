@@ -287,13 +287,16 @@ if (!$typical_time_frame) { // charachter mood should be difference of current a
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
 }
+if ($start !== 0) {
+  $min = $start;
+}
 parse_str($_SERVER['QUERY_STRING'], $qs);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=<?php echo @time() ?>">
   <title>Time Series</title>
 </head>
@@ -368,6 +371,7 @@ if ($title_img || $title_txt) {
 <script>
 'use strict';
 console.log(<?php echo json_encode($log); ?>);
+// buttons outside of time series <svg>
 <?php if ($typical_time_frame) { ?>
 var typical_shown = false;
 document.getElementById('typical-toggle').addEventListener('click', function(e) {
@@ -419,6 +423,7 @@ document.getElementById('historical-toggle').addEventListener('click', function(
     historical_shown = true;
   }
 });
+// set vars
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
     values = <?php echo json_encode($values) ?>,
     values0length = values[0].length,
@@ -433,6 +438,7 @@ for (var i = values[0].length-1; i >= 0; i--) { // calc real width
 }
 var charachter_width = svg_width/5,
     charachter_height = charachter_width*(598/449);
+// create svg
 var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).attr('viewBox', '0 0 ' + svg_width + ' ' + svg_height).attr('preserveAspectRatio', 'xMidYMid meet').attr('width', svg_width).attr('height', svg_height),
     margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: svg_width/35},
     chart_width = svg_width - margin.left - margin.right,
@@ -441,9 +447,10 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     <?php if ($charachter === 'fish') {
     echo "blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db'),\n";
     } ?>
-    charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);
+    charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height); // charachter to right of chart
+// menu above charachter
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
-    current_state = 0;
+    current_state = 0; // see menu_click()
 var icon_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 0).on('click', menu_click).style('fill', '#3498db');
 var kwh_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 1).on('click', menu_click);
 var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 2).on('click', menu_click);
@@ -453,13 +460,75 @@ var icon = user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 2
 var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
 var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
 var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
+// kwh, co2, money animations
+var total_kw = 0,
+    kw_count = 0;
+for (var i = values[0].length - 1; i >= 0; i--) {
+  if (values[0][i] !== null) {
+    total_kw += values[0][i];
+    kw_count++;
+  }
+}
+var avg_kw_at_end = total_kw/kw_count,
+    time_elapsed = (times[times.length-1].getTime()/1000)-(times[0].getTime()/1000),
+    anim_container = svg.append('g'),
+    grass = anim_container.append('g').style('display', 'none'),
+    kwh_anim = anim_container.append('g').style('display', 'none'),
+    co2_anim = anim_container.append('g').style('display', 'none'),
+    money_anim = anim_container.append('g').style('display', 'none');
+// draw backgrounds for different buttons in menu
+// grass is in all animations
+grass.append('rect').attr('width', charachter_width).attr('height', chart_height/2).attr('x', chart_width + margin.left).attr('y', svg_height - margin.bottom - charachter_height).attr('fill', '#B4E3F4');
+grass.append('rect').attr('width', charachter_width).attr('height', chart_height).attr('x', chart_width + margin.left).attr('y', '60%').attr('fill', 'rgb(129, 176, 64)');
+grass.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '52%');
+grass.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '57%');
+// kwh animation
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
+kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
+// co2 animation
+co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
+co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
+co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '43%');
+co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '43%');
+function smoke_animation() {
+  var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%'),
+      smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%'),
+      smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%'),
+      smoke1tran = smoke1.transition(),
+      smoke2tran = smoke2.transition(),
+      smoke3tran = smoke3.transition();
+  smoke1tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
+  smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
+  smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', smoke_animation);
+}
+smoke_animation();
+// money animation
+money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
+money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
+var current_leaves = [];
+function tree_leaves(frac, index) {
+  current_leaves.forEach(function(leaf) {
+    leaf.remove();
+  });
+  current_leaves = [];
+  // var frac = circle.attr('cx')/current_path_len,
+  //     index = Math.round(imgScale(frac));
+  if (orb_values[index] !== undefined) {
+    var rv = 100 - convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100); // subtract from max (100) to invert because orb_values are inverted because high numbered frames are happy and a high rv is bad
+    for (var i = Math.round(rv); i >= 0; i--) {
+      var leaf = money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+      current_leaves.push(leaf);
+    }
+  }
+  function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
+}
+// end animations
 
-svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)');
-svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>');
-var bg = d3.select('#background');
-bg.attr('width', chart_width);
-bg.attr('height', chart_height);
-bg.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
+svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
+var bg = d3.select('#background'); // style defined in style.css
+bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+// d3 scales
 var color = d3.scaleOrdinal(d3.schemeCategory10);
 var format = d3.format('.3s');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
@@ -513,8 +582,8 @@ svg.append("g")
   .attr("transform", "translate("+margin.left+"," + (chart_height+margin.top) + ")");
 svg.append("g")
   .call(yaxis)
-  .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks');
-// change charachter frame when mouse moves
+  .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks').attr('font-size', margin.bottom);
+// fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
 var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width); // +2/+20 are weird hacks; image not sized right
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
@@ -529,8 +598,8 @@ svg.append("rect") // circle moves when mouse is over this rect
   .on("mousemove", mousemoved);
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
 var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
-svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw');
-var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today").style('font-size', '1.25vw');
+svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today").style('font-size', '1.25vw').attr('class', 'bolder');
 //draw legend
 var x = margin.left,
     i = 0;
@@ -554,10 +623,10 @@ echo json_encode($legend);
   x += el.node().getBBox().width + (svg_width/50);
 });
 
-var timeout = null,
-    timeout2 = null,
-    interval = null;
-function control_center() {
+var timeout = null, // fires when the mouse is idle for 3s; calls control_center()
+    timeout2 = null, // fires when a movie has finished playing; calls play_data()
+    interval = null; // iterates over data in play_data() until the mouse moves
+function control_center() { // called every time the mouse is idle for 3s and at the end of play_data()
   clearTimeout(timeout);
   clearTimeout(timeout2);
   clearInterval(interval);
@@ -573,6 +642,7 @@ function mousemoved() {
   clearTimeout(timeout);
   clearTimeout(timeout2);
   clearInterval(interval);
+  anim_container.style('display', 'initial');
   timeout = setTimeout(control_center, 3000);
   var m = d3.mouse(this),
       // frac = m[0]/(chart_width*(values0length/values[0].length));
@@ -597,32 +667,17 @@ function mousemoved() {
   }
 }
 
-var total_kw = 0,
-    kw_count = 0;
-for (var i = values[0].length - 1; i >= 0; i--) {
-  if (values[0][i] !== null) {
-    total_kw += values[0][i];
-    kw_count++;
-  }
-}
-var avg_kw_at_end = total_kw/kw_count,
-    time_elapsed = (times[times.length-1].getTime()/1000)-(times[0].getTime()/1000),
-    anim_container = svg.append('g'),
-    grass = anim_container.append('g').style('display', 'none'),
-    kwh_anim = anim_container.append('g').style('display', 'none'),
-    co2_anim = anim_container.append('g').style('display', 'none'),
-    money_anim = anim_container.append('g').style('display', 'none');
 function menu_click() {
-  if (current_state === 0) {
+  if (current_state === 0) { // current_state 0 is the dynamic charachter behaviour
     icon_rect.style('fill', '#37474F');
     icon.style('fill', '#37474F');
-  } else if (current_state === 1) {
+  } else if (current_state === 1) { // current_state 1 is the kwh animation
     kwh_rect.style('fill', '#37474F');
     kwh_text.style('fill', '#37474F');
-  } else if (current_state === 2) {
+  } else if (current_state === 2) { // current_state 2 is the co2 animation
     co2_rect.style('fill', '#37474F');
     co2_text.style('fill', '#37474F');
-  } else if (current_state === 3) {
+  } else if (current_state === 3) { // current_state 3 is the money animation
     $rect.style('fill', '#37474F');
     $text.style('fill', '#37474F');
   }
@@ -662,53 +717,7 @@ function menu_click() {
     $text.style('fill', '#3498db');
   }
 }
-// draw backgrounds for different buttons in menu
-grass.append('rect').attr('width', charachter_width).attr('height', chart_height/2).attr('x', chart_width + margin.left).attr('y', svg_height - margin.bottom - charachter_height).attr('fill', '#B4E3F4');
-grass.append('rect').attr('width', charachter_width).attr('height', chart_height).attr('x', chart_width + margin.left).attr('y', '60%').attr('fill', 'rgb(129, 176, 64)');
-grass.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '52%');
-grass.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '57%');
-
-kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
-kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
-
-co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
-co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
-co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '43%');
-co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '43%');
-function smoke_animation() {
-  var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%'),
-      smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%'),
-      smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%'),
-      smoke1tran = smoke1.transition(),
-      smoke2tran = smoke2.transition(),
-      smoke3tran = smoke3.transition();
-  smoke1tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
-  smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
-  smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', smoke_animation);
-}
-smoke_animation();
-
-money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
-money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
-var current_leaves = [];
-function tree_leaves(frac, index) {
-  current_leaves.forEach(function(leaf) {
-    leaf.remove();
-  });
-  current_leaves = [];
-  // var frac = circle.attr('cx')/current_path_len,
-  //     index = Math.round(imgScale(frac));
-  if (orb_values[index] !== undefined) {
-    var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
-    for (var i = Math.round(rv); i >= 0; i--) {
-      var leaf = money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
-      current_leaves.push(leaf);
-    }
-  }
-  function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
-}
-// end kwh animation
-
+// dynamic charachter behaviour
 var frames = [],
     last_frame = 0;
 function animate_to(frame) {
@@ -720,6 +729,8 @@ function animate_to(frame) {
     while (--last_frame > frame) {
       frames.push(last_frame);
     }
+  } else {
+    frames.push(frame);
   }
 }
 setInterval(function() { // outside is best for performance
@@ -759,7 +770,7 @@ function play_movie() {
   var frac = circle.attr('cx')/current_path_len,
       index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
-    var rv = convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
+    var rv = 100 - convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
     // console.log(rv);
     var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
     var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391

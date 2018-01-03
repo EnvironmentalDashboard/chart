@@ -326,8 +326,12 @@ text {
   font-weight: 400;
   font-size: 1vmax;
 }
-#yaxis_ticks text {
-  font-size: 1.5vmax;
+.bolder {
+  font-weight: 500;
+}
+.ticks text {
+  font-weight: 500;
+  font-size: 1vmax;
 }
 #current-reading {
   font-size: 3vw;
