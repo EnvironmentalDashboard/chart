@@ -61,7 +61,7 @@ switch ($time_frame) {
     $to = strtotime(date('Y-m-d H') . ":59:59") + 1; // End of the hour
     $res = 'live';
     $increment = MIN;
-    $xaxis_format = '%I:%M %p';
+    $xaxis_format = '%-I:%M %p';
     $pct_thru = ($now - $from) / HOUR;
     $double_time = $from - HOUR;
     $xaxis_ticks = 8;
@@ -86,7 +86,7 @@ switch ($time_frame) {
     $to = strtotime(date('Y-m-d') . " 23:59:59") + 1; // End of day
     $res = 'quarterhour';
     $increment = QUARTERHOUR;
-    $xaxis_format = '%I:%M %p';
+    $xaxis_format = '%-I %p';
     $pct_thru = ($now - $from) / DAY;
     $double_time = $from - DAY;
     $xaxis_ticks = 13;
@@ -415,6 +415,7 @@ document.getElementById('other-meters').addEventListener('click', function(e) {
     dropdown_menu2_shown = true;
   }
 });
+var historical_shown = false;
 document.getElementById('historical-toggle').addEventListener('click', function(e) {
   e.preventDefault();
   if (historical_shown) {
@@ -507,30 +508,25 @@ var wire = kwh_anim.append('path').attr('stroke', 'black').attr('stroke-width', 
     electric_node2 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
     electric_node3 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
     electric_node4 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
-    electricity = [electric_node1, electric_node2, electric_node3, electric_node4];
+    electricity = [electric_node1, electric_node2, electric_node3, electric_node4],
+    electricity_timer = null;
 function electric_current(index) {
-  var buffer = 0;
-  console.log(buffer);
-  while (current_state === 1 && buffer < 100) {
-    electricity.forEach(function(el) {
-      var i = 0,
-          path = wire.node(),
-          len = Math.floor(path.getTotalLength()),
-          loop = null;
-      setTimeout(function() {
-        ++buffer;
-        loop = setInterval(function() {
-          var point = path.getPointAtLength(i++);
-          el.attr('cx', point['x']).attr('cy', point['y']);
-          if (i > len) {
-            --buffer;
-            clearInterval(loop);
-          }
-        }, orb_values[index]/50);
-      }, 10);
-    });
-  }
+  electricity.forEach(function(el) {
+    var i = 0,
+        path = wire.node(),
+        len = Math.floor(path.getTotalLength()),
+        loop = null;
+    loop = setInterval(function() {
+      var point = path.getPointAtLength(i++);
+      el.attr('cx', point['x']).attr('cy', point['y']);
+      if (i > len) {
+        clearInterval(loop);
+      }
+    }, orb_values[index]/100);
+  });
 }
+
+
 // co2 animation
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
@@ -540,10 +536,14 @@ function smoke_animation() {
   var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%'),
       smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%'),
       smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%'),
-      smoke1tran = smoke1.transition(),
+      smoke1tran = smoke1.transition().duration(4000),
       smoke2tran = smoke2.transition(),
       smoke3tran = smoke3.transition();
-  smoke1tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
+  smoke1tran.tween("attr:transform", function() {
+    var i = d3.interpolateString("rotate(0)", "rotate(720)");
+    return function(t) { smoke1.attr("transform", i(t)); };
+  });
+  // smoke1tran.attr("transform", "translate(300, -300) scale(2)").style('opacity', 0);
   smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
   smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', smoke_animation);
 }
@@ -552,13 +552,11 @@ smoke_animation();
 money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
 var current_leaves = [];
-function tree_leaves(frac, index) {
+function tree_leaves(index) {
   current_leaves.forEach(function(leaf) {
     leaf.remove();
   });
   current_leaves = [];
-  // var frac = circle.attr('cx')/current_path_len,
-  //     index = Math.round(imgScale(frac));
   if (orb_values[index] !== undefined) {
     var rv = 100 - convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100); // subtract from max (100) to invert because orb_values are inverted because high numbered frames are happy and a high rv is bad
     for (var i = Math.round(rv); i >= 0; i--) {
@@ -696,7 +694,7 @@ function mousemoved() {
       frac = m[0]/current_path_len;
   if (frac < 1) {
     var p = closestPoint(current_path.node(), m),
-      p2 = closestPoint(compared_path.node(), m);
+        p2 = closestPoint(compared_path.node(), m);
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr('cx', p2['x']).attr('cy', p2['y']);
     var index = Math.round(imgScale(frac));
@@ -710,8 +708,14 @@ function mousemoved() {
       kw_count++;
     }
     accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
-    tree_leaves(frac, Math.floor(index));
-    electric_current(Math.floor(index));
+    if (current_state === 1) {
+      electricity_timer = setInterval(function() { electric_current(index); }, 10000);
+    } else {
+      clearInterval(electricity_timer);
+    }
+    if (current_state === 3) {
+      tree_leaves(Math.floor(index));
+    }
   }
 }
 
@@ -789,23 +793,32 @@ setInterval(function() { // outside is best for performance
 
 function play_data() {
   anim_container.style('display', 'initial');
-  var end_i = Math.floor(current_path_len),
-      i = 0, total_kw = 0;
+  var end_i = Math.ceil(current_path_len), total_kw = 0,
+      i = 0, i2 = 0; // i2 is to jerk circle2 representing the typical use forward if the circle representing current use has to because of null data
   interval = setInterval(function() { // will go for end_i iterations
     var p = closestPoint(current_path.node(), [i, -1]), // -1 is a dummy value
-        p2 = closestPoint(compared_path.node(), [i, -1]);
+        p2 = closestPoint(compared_path.node(), [i2, -1]);
+    while (p2['x'] < p['x']) { // if there's null data and circle skips ahead, make sure circle2 also skips
+      p2 = closestPoint(compared_path.node(), [++i2, -1]);
+    }
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr("cx", p2['x']).attr("cy", p2['y']);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var index = Math.round(imgScale(i/end_i));
     animate_to(orb_values[index]);
-    tree_leaves(i/end_i, index);
-    electric_current(index);
+    if (current_state === 1) {
+      electricity_timer = setInterval(function() { electric_current(index); }, 10000);
+    } else {
+      clearInterval(electricity_timer);
+    }
+    if (current_state === 3) {
+      tree_leaves(index);
+    }
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
     accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, current_state));
-    if (i >= end_i) {
+    if (i > end_i) {
       control_center();
     }
   }, (1/end_i)*<?php echo 30000 * $pct_thru ?>); // (1/end_i)*7000 will make the loop go for 7 seconds
