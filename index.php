@@ -360,6 +360,10 @@ if ($title_img || $title_txt) {
       <stop class="stop1" stop-color="#ECEFF1" offset="0%"/>
       <stop class="stop2" stop-color="#B0BEC5" offset="100%"/>
     </linearGradient>
+    <linearGradient id="shadow2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#777;stop-opacity:1" />
+    </linearGradient>
     <linearGradient id="dirt_grad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="30%" style="stop-color:rgba(129, 176, 64, 0);stop-opacity:1" />
       <stop offset="80%" style="stop-color:#795548;stop-opacity:1" />
@@ -485,6 +489,48 @@ grass.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/c
 // kwh animation
 kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
 kwh_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
+kwh_anim.append('rect').attr('height', svg_height/4).attr('width', svg_height/50).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '75%').attr('x', margin.left+chart_width+(charachter_width*.8)).attr('stroke-linejoin', 'round');
+kwh_anim.append('rect').attr('height', svg_height/90).attr('width', svg_height/6).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '73%').attr('x', (margin.left+chart_width+(charachter_width*.8))-((svg_height/12)-(svg_height/90)));
+kwh_anim.append('rect').attr('height', svg_height/90).attr('width', svg_height/6).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '75%').attr('x', (margin.left+chart_width+(charachter_width*.8))-((svg_height/12)-(svg_height/90)));
+kwh_anim.append('line').attr('x1', (margin.left+chart_width+(charachter_width*.8))).attr('y1', '80%').attr('x2', (margin.left+chart_width+(charachter_width*.68))).attr('y2', '74%').attr('stroke', 'black').attr('stroke-width', svg_width/1000);
+kwh_anim.append('line').attr('x1', (margin.left+chart_width+(charachter_width*.84))).attr('y1', '80%').attr('x2', (margin.left+chart_width+(charachter_width*.93))).attr('y2', '74%').attr('stroke', 'black').attr('stroke-width', svg_width/1000);
+var startx = (svg_width-charachter_width)*1.04,
+    starty = (svg_height*.5),
+    cp1x = (svg_width-charachter_width)*1.1, // control point 1 x coord
+    cp1y = svg_height*.6,
+    cp2x = svg_width*.9,
+    cp2y = svg_height*.8,
+    endx = margin.left+chart_width+(charachter_width*.8),
+    endy = svg_height*.75;
+var wire = kwh_anim.append('path').attr('stroke', 'black').attr('stroke-width', svg_width/1000).attr('fill', 'transparent').attr('d', 'M'+startx+' '+starty+' C '+cp1x+' '+cp1y+', '+cp2x+' '+cp2y+', '+endx+' '+endy),
+    electric_node1 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
+    electric_node2 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
+    electric_node3 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
+    electric_node4 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
+    electricity = [electric_node1, electric_node2, electric_node3, electric_node4];
+function electric_current(index) {
+  var buffer = 0;
+  console.log(buffer);
+  while (current_state === 1 && buffer < 100) {
+    electricity.forEach(function(el) {
+      var i = 0,
+          path = wire.node(),
+          len = Math.floor(path.getTotalLength()),
+          loop = null;
+      setTimeout(function() {
+        ++buffer;
+        loop = setInterval(function() {
+          var point = path.getPointAtLength(i++);
+          el.attr('cx', point['x']).attr('cy', point['y']);
+          if (i > len) {
+            --buffer;
+            clearInterval(loop);
+          }
+        }, orb_values[index]/50);
+      }, 10);
+    });
+  }
+}
 // co2 animation
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
@@ -525,6 +571,7 @@ function tree_leaves(frac, index) {
 // end animations
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
+// svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
 svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
 var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -664,6 +711,7 @@ function mousemoved() {
     }
     accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
     tree_leaves(frac, Math.floor(index));
+    electric_current(Math.floor(index));
   }
 }
 
@@ -752,6 +800,7 @@ function play_data() {
     var index = Math.round(imgScale(i/end_i));
     animate_to(orb_values[index]);
     tree_leaves(i/end_i, index);
+    electric_current(index);
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;

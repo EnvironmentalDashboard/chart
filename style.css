@@ -322,15 +322,16 @@ svg {
 }
 text {
   stroke: #37474F;
+  stroke-width: 0;
   fill: #37474F;
-  font-weight: 400;
+  font-weight: 500;
   font-size: 1vmax;
 }
 .bolder {
-  font-weight: 500;
+  font-weight: 700;
 }
 .ticks text {
-  font-weight: 500;
+  font-weight: 700;
   font-size: 1vmax;
 }
 #current-reading {
