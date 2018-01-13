@@ -428,13 +428,15 @@ document.getElementById('historical-toggle').addEventListener('click', function(
     historical_shown = true;
   }
 });
+function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); } // how is this not built into js?
 // set vars
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
     values = <?php echo json_encode($values) ?>,
     values0length = values[0].length,
     orb_values = <?php echo json_encode($orb_values) ?>,
     svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
-    svg_height = svg_width / 2.75;
+    svg_height = svg_width / 2.75,
+    index = 0;
 for (var i = values[0].length-1; i >= 0; i--) { // calc real width
   if (values[0][i] !== null) {
     break;
@@ -504,27 +506,26 @@ var startx = (svg_width-charachter_width)*1.04,
     endx = margin.left+chart_width+(charachter_width*.8),
     endy = svg_height*.75;
 var wire = kwh_anim.append('path').attr('stroke', 'black').attr('stroke-width', svg_width/1000).attr('fill', 'transparent').attr('d', 'M'+startx+' '+starty+' C '+cp1x+' '+cp1y+', '+cp2x+' '+cp2y+', '+endx+' '+endy),
-    electric_node1 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
-    electric_node2 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
-    electric_node3 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
-    electric_node4 = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100),
-    electricity = [electric_node1, electric_node2, electric_node3, electric_node4],
-    electricity_timer = null;
-function electric_current(index) {
-  electricity.forEach(function(el) {
-    var i = 0,
-        path = wire.node(),
-        len = Math.floor(path.getTotalLength()),
-        loop = null;
-    loop = setInterval(function() {
-      var point = path.getPointAtLength(i++);
-      el.attr('cx', point['x']).attr('cy', point['y']);
-      if (i > len) {
-        clearInterval(loop);
-      }
-    }, orb_values[index]/100);
-  });
+    electric_node = kwh_anim.append('circle').attr('fill', 'yellow').attr("r", svg_width/300).attr('cx', -100).attr('cy', -100);
+var i = 0,
+    path = wire.node(),
+    len = Math.floor(path.getTotalLength()),
+    add = true;
+function electric_anim() {
+  var point = path.getPointAtLength(i);
+  if (add) {
+    i++;
+  } else {
+    i--;
+  }
+  electric_node.attr('cx', point['x']).attr('cy', point['y']);
+  if (add && i > len) {
+    add = false;
+  } else if (!add && i < 1) {
+    add = true;
+  }
 }
+var electricity_timer = null;
 
 
 // co2 animation
@@ -532,27 +533,37 @@ co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberli
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '43%');
 co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '43%');
-function smoke_animation() {
-  var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%'),
-      smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%'),
-      smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%'),
-      smoke1tran = smoke1.transition().duration(4000),
-      smoke2tran = smoke2.transition(),
-      smoke3tran = smoke3.transition();
+var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%');
+var smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%');
+var smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%');
+function co2_animation() {
+  var smoke1tran = smoke1.transition().duration(4000),
+      smoke2tran = smoke2.transition().duration(4000),
+      smoke3tran = smoke3.transition().duration(4000);
+  var x = -getRandomInt(2200, 2380), x2 = -getRandomInt(2200, 2380), x3 = -getRandomInt(2200, 2380);
+  // -2200
   smoke1tran.tween("attr:transform", function() {
-    var i = d3.interpolateString("rotate(0)", "rotate(720)");
+    var i = d3.interpolateString("translate(0,0) scale(1)", "translate("+x+",-800) scale(3)");
     return function(t) { smoke1.attr("transform", i(t)); };
   });
-  // smoke1tran.attr("transform", "translate(300, -300) scale(2)").style('opacity', 0);
-  smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
-  smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', smoke_animation);
+  smoke2tran.tween("attr:transform", function() {
+    var i = d3.interpolateString("translate(0,0) scale(1)", "translate("+x2+",-800) scale(3)");
+    return function(t) { smoke2.attr("transform", i(t)); };
+  });
+  smoke3tran.tween("attr:transform", function() {
+    var i = d3.interpolateString("translate(0,0) scale(1)", "translate("+x3+",-800) scale(3)");
+    return function(t) { smoke3.attr("transform", i(t)); };
+  });
+  // smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
+  // smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', co2_animation);
+  smoke1tran.on('end', co2_animation);
 }
-smoke_animation();
+co2_animation();
 // money animation
 money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
 var current_leaves = [];
-function tree_leaves(index) {
+function tree_leaves() {
   current_leaves.forEach(function(leaf) {
     leaf.remove();
   });
@@ -564,7 +575,6 @@ function tree_leaves(index) {
       current_leaves.push(leaf);
     }
   }
-  function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
 }
 // end animations
 
@@ -579,7 +589,6 @@ var format = d3.format('.3s');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
 var imgScale = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true); // do orb_values.length-1 instead of values0length?
-var values0Scale = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true);
 // draw lines
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; }) // points are only defined if they are not null
@@ -697,22 +706,17 @@ function mousemoved() {
         p2 = closestPoint(compared_path.node(), m);
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr('cx', p2['x']).attr('cy', p2['y']);
-    var index = Math.round(imgScale(frac));
+    index = Math.round(imgScale(frac));
+    // console.log(orb_values[index], index); // to verify charachter mood
     animate_to(orb_values[index]);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var total_kw = 0,
-        kw_count = 0,
-        index = values0Scale(frac);
+        kw_count = 0;
     for (var i = 0; i <= index; i++) {
       total_kw += values[0][i];
       kw_count++;
     }
     accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
-    if (current_state === 1) {
-      electricity_timer = setInterval(function() { electric_current(index); }, 10000);
-    } else {
-      clearInterval(electricity_timer);
-    }
     if (current_state === 3) {
       tree_leaves(Math.floor(index));
     }
@@ -726,6 +730,7 @@ function menu_click() {
   } else if (current_state === 1) { // current_state 1 is the kwh animation
     kwh_rect.style('fill', '#37474F');
     kwh_text.style('fill', '#37474F');
+    clearInterval(electricity_timer);
   } else if (current_state === 2) { // current_state 2 is the co2 animation
     co2_rect.style('fill', '#37474F');
     co2_text.style('fill', '#37474F');
@@ -751,6 +756,7 @@ function menu_click() {
     grass.style('display', 'initial');
     kwh_rect.style('fill', '#3498db');
     kwh_text.style('fill', '#3498db');
+    electricity_timer = setInterval(electric_anim, 1/orb_values[index]);
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
@@ -804,13 +810,8 @@ function play_data() {
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr("cx", p2['x']).attr("cy", p2['y']);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
-    var index = Math.round(imgScale(i/end_i));
+    index = Math.round(imgScale(i/end_i));
     animate_to(orb_values[index]);
-    if (current_state === 1) {
-      electricity_timer = setInterval(function() { electric_current(index); }, 10000);
-    } else {
-      clearInterval(electricity_timer);
-    }
     if (current_state === 3) {
       tree_leaves(index);
     }
