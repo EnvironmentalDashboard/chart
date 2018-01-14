@@ -95,7 +95,7 @@ switch ($time_frame) {
 $times = range($from, $to, $increment); // each array in $values should be count($times) long such that the float in the $values array corresponds to the time in the $times array with the same index
 $num_points = count($times);
 $values = [];
-$max = PHP_INT_MIN;
+$max = PHP_INT_MIN; // global max/min of all charts to determine how to scale y axis
 $min = PHP_INT_MAX;
 // get data from db for each chart and format so that it matches $times
 for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus a historical chart and typical chart (typical only on day/week res)
@@ -129,7 +129,8 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
 }
 
 // calculate the typical line
-$orb_values = [];
+$bands = [];
+$typical_line = []; // formed by taking the median of each sub array value in $bands
 $typical_time_frame = ($time_frame === 'day' || $time_frame === 'week'); // there is only enough data to do the relative value calculation with these resolutions
 if ($typical_time_frame) {
   // See if a configuration for the relative data exists in the db, and if not, have a default
@@ -149,53 +150,25 @@ if ($typical_time_frame) {
       break;
     }
   }
-
-  $prev_lines = array_fill(0, $npoints, []); // holds npoints arrays that each represent a line
-  $prev_linesi = 0;
-  $typical_line = []; // formed by taking the median of each sub array value in $prev_lines
-  $last = null;
   if ($time_frame === 'day') {
     $stmt = $db->prepare( // get npoints days worth of data
     'SELECT value, recorded FROM meter_data
-    WHERE meter_id = ? AND value IS NOT NULL AND resolution = ?
+    WHERE meter_id = ? AND resolution = ?
     AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ('.implode(',', $days).') AND recorded < ?
     ORDER BY recorded DESC LIMIT ' . (intval($npoints)*24*4)); // to get npoints days of quarterhour data, npoints*24*4 = 4 points per hour, 24 per day
     $stmt->execute([$meter0, 'quarterhour', $from]);
-    foreach (array_reverse($stmt->fetchAll()) as $row) { // need to order by DESC for the LIMIT to select the most recent records but actually we want it to be ASC
-      $day_of_week = date('w', $row['recorded']);
-      if ($last !== $day_of_week && $last !== null) {
-        ++$prev_linesi;
+    if ($stmt->rowCount() > 0) {
+      foreach ($stmt->fetchAll() as $row) {
+        // 'Gi' = hours and minutes (mins padded with 0s)
+        $bands[date('Gi', $row['recorded'])][] = (float) $row['value'];
       }
-      $prev_lines[$prev_linesi][] = (float) $row['value'];
-      $last = $day_of_week;
-    }
-    // die();
-    if ($prev_linesi+1 !== $npoints) {
-      $log[] = "Not enough data to calculate a median line using the previous {$npoints} typical days; using the previous " . ($prev_linesi+1) . " typical days instead";
-      $npoints = $prev_linesi + 1;
-    }
-    for ($i=0; $i < $npoints; $i++) { // make sure all arrays are same size
-      $prev_lines[$i] = change_res($prev_lines[$i], $num_points);
-    }
-    $sec = $from;
-    $inc = ($to - $from) / $num_points;
-    for ($i=0; $i < $num_points; $i++) { 
-      $array_val = [];
-      for ($j=0; $j < $npoints; $j++) { 
-        $array_val[] = $prev_lines[$j][$i];
+      $keys = array_keys($bands);
+      sort($keys);
+      foreach ($keys as $time) {
+        $typical_line[] = median($bands[$time]);
+        sort($bands[$time]);
       }
-      $cur = $values[0][$i];
-      $rv = $number_of_frames - Meter::relativeValue($array_val, $cur, 0, $number_of_frames);
-      $orb_values[] = round($rv);
-      $median = median($array_val);
-      $typical_line[$i] = $median;
-      if ($median > $max) {
-        $max = $median;
-      }
-      if ($median < $min) {
-        $min = $median;
-      }
-      $sec += $inc;
+      $typical_line = change_res($typical_line, $num_points);
     }
   } else { // week
     $stmt = $db->prepare( // https://stackoverflow.com/a/7786588/2624391
@@ -203,53 +176,24 @@ if ($typical_time_frame) {
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded < ?
     ORDER BY recorded DESC LIMIT ' . ($npoints*24*7)); // to get npoints weeks of hour data, npoints*24*7 = 24 points per day, 7 days per week
     $stmt->execute([$meter0, 'hour', $from]);
-    // echo "<!--";
-    foreach (array_reverse($stmt->fetchAll()) as $row) { // need to reorder for same reason as above
-      $day_of_week = date('w', $row['recorded']);
-      if ($day_of_week == '0' && $day_of_week !== $last && $last !== null) {
-        ++$prev_linesi;
+    if ($stmt->rowCount() > 0) {
+      foreach ($stmt->fetchAll() as $row) {
+        // 'wG' = week, hours
+        $bands[date('wG')][] = (float) $row['value'];
       }
-      $prev_lines[$prev_linesi][] = (float) $row['value'];
-      $last = $day_of_week;
-    }
-    if ($prev_linesi+1 !== $npoints) {
-      $log[] = "Not enough data to calculate a median line using the previous {$npoints} weeks; using the previous " . ($prev_linesi+1) . " weeks instead";
-      $npoints = $prev_linesi + 1;
-    }
-    for ($i=0; $i < $npoints; $i++) { // make sure all arrays are same size
-      $prev_lines[$i] = change_res($prev_lines[$i], $num_points);
-    }
-    $sec = $from;
-    $inc = ($to - $from) / $num_points;
-    for ($i=0; $i < $num_points; $i++) { 
-      $array_val = [];
-      for ($j=0; $j < $npoints; $j++) { 
-        $array_val[] = $prev_lines[$j][$i];
+      $keys = array_keys($bands);
+      sort($keys);
+      foreach ($keys as $time) {
+        $typical_line[] = median($bands[$time]);
+        sort($bands[$time]);
       }
-      $cur = $values[0][$i];
-      $rv = $number_of_frames - Meter::relativeValue($array_val, $cur, 0, $number_of_frames);
-      $orb_values[] = round($rv);
-      $median = median($array_val);
-      $typical_line[$i] = $median;
-      // echo "\n\n\n\n\nIteration $i\n";
-      // print_r($array_val);
-      // echo "\n{$rv}\n";
-      // var_dump($cur);
-      if ($median > $max) {
-        $max = $median;
-      }
-      if ($median < $min) {
-        $min = $median;
-      }
-      $sec += $inc;
+      $typical_line = change_res($typical_line, $num_points);
     }
   }
-  $prev_lines = null; // this is a pretty big variable, free for gc
-  // foreach ($prev_lines as $l) {
-  //   $values[] = $l;
-  // }
-  $values[] = $typical_line; // typical line is 2nd to last chart in $values
-  $total_charts++;
+  if (count($typical_line) > 0) {
+    $values[] = $typical_line; // typical line is 2nd to last chart in $values
+    $total_charts++;
+  }
 }
 // get historical data for first meter
 $data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
@@ -263,25 +207,6 @@ if (!empty($data)) {
     if ($best_guess !== null && $best_guess < $min) {
       $min = $best_guess;
     }
-  }
-}
-if (!$typical_time_frame) { // charachter mood should be difference of current and past data
-  $max_diff = PHP_INT_MIN;
-  $min_diff = PHP_INT_MAX;
-  $j = count($values) - 1;
-  $tmp = [];
-  for ($i = 0; $i < $num_points; $i++) { 
-    $diff = $values[0][$i] - $values[$j][$i];
-    if ($diff > $max) { // subtract historical from current
-      $max = $diff;
-    }
-    if ($diff < $min) {
-      $min = $diff;
-    }
-    $tmp[] = $diff;
-  }
-  foreach ($tmp as $val) {
-    $orb_values[] = Meter::convertRange($val, $min_diff, $max_diff, 0, $number_of_frames);
   }
 }
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
@@ -428,15 +353,47 @@ document.getElementById('historical-toggle').addEventListener('click', function(
     historical_shown = true;
   }
 });
+// general functions
 function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); } // how is this not built into js?
+function typical_data(time) {
+  <?php if ($time_frame === 'week') { ?>
+  var week = time.getDay(),
+      hrs = time.getHours();
+  var hash = week.toString() + hrs.toString();
+  // console.log(hash);
+  return bands[hash];
+  <?php } else { ?>
+  var mins = time.getMinutes(),
+      hrs = time.getHours();
+  mins = Math.round(mins / 15) * 15; // round to nearest 15 minute
+  if (mins < 10) {
+    mins = '0' + mins;
+  }
+  else if (mins == 60) {
+    mins = '00';
+    hrs = hrs + 1;
+  }
+  var hash = hrs.toString() + mins.toString();
+  // console.log(hash);
+  return bands[hash];
+  <?php } ?>
+}
+function set_relative_value(typical, current) {
+  var count = typical.length;
+  // console.log(typical, current);
+  var copy = typical.slice();
+  copy.push(current);
+  copy.sort(function(a,b) {return a-b;});
+  rv = (copy.indexOf(current) / (count)) * 100;
+}
 // set vars
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
     values = <?php echo json_encode($values) ?>,
     values0length = values[0].length,
-    orb_values = <?php echo json_encode($orb_values) ?>,
+    bands = <?php echo json_encode($bands) ?>,
+    rv = 0,
     svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
-    svg_height = svg_width / 2.75,
-    index = 0;
+    svg_height = svg_width / 2.75;
 for (var i = values[0].length-1; i >= 0; i--) { // calc real width
   if (values[0][i] !== null) {
     break;
@@ -568,12 +525,9 @@ function tree_leaves() {
     leaf.remove();
   });
   current_leaves = [];
-  if (orb_values[index] !== undefined) {
-    var rv = 100 - convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100); // subtract from max (100) to invert because orb_values are inverted because high numbered frames are happy and a high rv is bad
-    for (var i = Math.round(rv); i >= 0; i--) {
-      var leaf = money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
-      current_leaves.push(leaf);
-    }
+  for (var i = Math.round(rv); i >= 0; i--) {
+    var leaf = money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+    current_leaves.push(leaf);
   }
 }
 // end animations
@@ -588,7 +542,7 @@ var color = d3.scaleOrdinal(d3.schemeCategory10);
 var format = d3.format('.3s');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
-var imgScale = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true); // do orb_values.length-1 instead of values0length?
+var pct_thru = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true); // do orb_values.length-1 instead of values0length?
 // draw lines
 var lineGenerator = d3.line()
   .defined(function(d) { return d !== null; }) // points are only defined if they are not null
@@ -699,24 +653,26 @@ function mousemoved() {
   anim_container.style('display', 'initial');
   timeout = setTimeout(control_center, 3000);
   var m = d3.mouse(this),
-      // frac = m[0]/(chart_width*(values0length/values[0].length));
       frac = m[0]/current_path_len;
   if (frac < 1) {
     var p = closestPoint(current_path.node(), m),
         p2 = closestPoint(compared_path.node(), m);
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr('cx', p2['x']).attr('cy', p2['y']);
-    index = Math.round(imgScale(frac));
-    // console.log(orb_values[index], index); // to verify charachter mood
-    animate_to(orb_values[index]);
-    current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
+    var index = Math.round(pct_thru(frac));
+    var elapsed = xScale.invert(p['x']),
+        current = yScale.invert(p['y']);
+    var typical = typical_data(elapsed);
+    set_relative_value(typical, current);
+    animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
+    current_reading.text(d3.format('.2s')(current));
     var total_kw = 0,
         kw_count = 0;
     for (var i = 0; i <= index; i++) {
       total_kw += values[0][i];
       kw_count++;
     }
-    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/kw_count, current_state));
+    accum.text(accumulation(elapsed, total_kw/kw_count, current_state));
     if (current_state === 3) {
       tree_leaves(Math.floor(index));
     }
@@ -756,7 +712,7 @@ function menu_click() {
     grass.style('display', 'initial');
     kwh_rect.style('fill', '#3498db');
     kwh_text.style('fill', '#3498db');
-    electricity_timer = setInterval(electric_anim, 1/orb_values[index]);
+    electricity_timer = setInterval(electric_anim, 1/rv);
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
@@ -779,16 +735,18 @@ function menu_click() {
 var frames = [],
     last_frame = 0;
 function animate_to(frame) {
-  if (frame > last_frame) {
-    while (++last_frame < frame) {
-      frames.push(last_frame);
+  if (frames.length < 100) {
+    if (frame > last_frame) {
+      while (++last_frame < frame) {
+        frames.push(last_frame);
+      }
+    } else if (frame < last_frame) {
+      while (--last_frame > frame) {
+        frames.push(last_frame);
+      }
+    } else {
+      frames.push(frame);
     }
-  } else if (frame < last_frame) {
-    while (--last_frame > frame) {
-      frames.push(last_frame);
-    }
-  } else {
-    frames.push(frame);
   }
 }
 setInterval(function() { // outside is best for performance
@@ -810,8 +768,12 @@ function play_data() {
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr("cx", p2['x']).attr("cy", p2['y']);
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
-    index = Math.round(imgScale(i/end_i));
-    animate_to(orb_values[index]);
+    var index = Math.round(pct_thru(i/end_i));
+    var elapsed = xScale.invert(p['x']),
+        current = yScale.invert(p['y']);
+    var typical = typical_data(elapsed);
+    set_relative_value(typical, current);
+    animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
     if (current_state === 3) {
       tree_leaves(index);
     }
@@ -830,30 +792,25 @@ var movies_played = 0;
 function play_movie() {
   frames = [];
   anim_container.style('display', 'none');
-  var frac = circle.attr('cx')/current_path_len,
-      index = Math.round(imgScale(frac));
-  if (orb_values[index] !== undefined) {
-    var rv = 100 - convertRange(orb_values[index], 0, <?php echo $number_of_frames ?>, 0, 100);
-    // console.log(rv);
-    var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
-    var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391
-    xmlHttp.onreadystatechange = function() {
-      if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-        var split = xmlHttp.responseText.split('$SEP$');
-        console.log(split);
-        var len = split[1];
-        var name = split[0];
-        var fishbg_name = split[2];
-        charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
-        if (fishbg_name != 'none') {
-          fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
-        }
-        timeout2 = setTimeout(play_data, len);
+  // console.log(rv);
+  var url = 'https://oberlindashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
+  var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391
+  xmlHttp.onreadystatechange = function() {
+    if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+      var split = xmlHttp.responseText.split('$SEP$');
+      console.log(split);
+      var len = split[1];
+      var name = split[0];
+      var fishbg_name = split[2];
+      charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
+      if (fishbg_name != 'none') {
+        fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
       }
+      timeout2 = setTimeout(play_data, len);
     }
-    xmlHttp.open("GET", url, true); // true for asynchronous 
-    xmlHttp.send(null);
   }
+  xmlHttp.open("GET", url, true); // true for asynchronous 
+  xmlHttp.send(null);
 }
 
 function closestPoint(pathNode, point) {
