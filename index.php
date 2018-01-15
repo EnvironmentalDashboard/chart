@@ -377,20 +377,27 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
     <?php if ($charachter === 'fish') {
     echo "blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db'),\n";
+    // fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
+    echo "fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width),\n"; // +2/+20 are weird hacks; image not sized right
     } ?>
     charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height); // charachter to right of chart
+ 
 // menu above charachter
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0; // see menu_click()
-var icon_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 0).on('click', menu_click).style('fill', '#3498db');
-var kwh_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 1).on('click', menu_click);
-var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 2).on('click', menu_click);
-var $rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '1%').attr('data-option', 3).on('click', menu_click);
-var user_icon = svg.append('svg').attr('height', svg_width*.016).attr('width', svg_width*.016).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.02)).attr('data-option', 0).on('click', menu_click);
+var icon_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '1%').style('fill', '#3498db');
+var kwh_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '1%');
+var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '1%');
+var $rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '1%');
+var user_icon = svg.append('svg').attr('height', svg_width*.016).attr('width', svg_width*.016).attr('viewBox', '0 0 1792 1792').attr('x', svg_width - (charachter_width*.93)).attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.02));
 var icon = user_icon.append('path').attr('d', 'M896 0q182 0 348 71t286 191 191 286 71 348q0 181-70.5 347t-190.5 286-286 191.5-349 71.5-349-71-285.5-191.5-190.5-286-71-347.5 71-348 191-286 286-191 348-71zm619 1351q149-205 149-455 0-156-61-298t-164-245-245-164-298-61-298 61-245 164-164 245-61 298q0 250 149 455 66-327 306-327 131 128 313 128t313-128q240 0 306 327zm-235-647q0-159-112.5-271.5t-271.5-112.5-271.5 112.5-112.5 271.5 112.5 271.5 271.5 112.5 271.5-112.5 112.5-271.5z').attr('fill', '#3498db');
-var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text').attr('data-option', 1).on('click', menu_click);
-var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text').attr('data-option', 2).on('click', menu_click);
-var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text').attr('data-option', 3).on('click', menu_click);
+var kwh_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.7)).attr('width', charachter_width).text('kWh').attr('class', 'menu-text');
+var co2_text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.435)).attr('width', charachter_width).text('CO2').attr('class', 'menu-text');
+var $text = svg.append('text').attr('y', svg_height-charachter_height-margin.bottom-(svg_width*.007)).attr('x', svg_width - (charachter_width*.13)).attr('width', charachter_width).text('$').attr('class', 'menu-text');
+svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 0).on('click', menu_click).attr('cursor', 'pointer');
+svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 1).on('click', menu_click).attr('cursor', 'pointer');
+svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 2).on('click', menu_click).attr('cursor', 'pointer');
+svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 3).on('click', menu_click).attr('cursor', 'pointer');
 // kwh, co2, money animations
 var total_kw = 0,
     kw_count = 0;
@@ -564,8 +571,6 @@ svg.append("g")
 svg.append("g")
   .call(yaxis)
   .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks').attr('font-size', margin.bottom);
-// fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
-var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width); // +2/+20 are weird hacks; image not sized right
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", svg_width/200).attr("stroke", color(0)).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
@@ -580,7 +585,7 @@ svg.append("rect") // circle moves when mouse is over this rect
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
 var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
-var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("Kilowatt-hours today").style('font-size', '1.25vw').attr('class', 'bolder');
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours ' : 'Gallons so far '; echo ($time_frame === 'day') ? 'today' : $time_frame;  ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 //draw legend
 var x = margin.left,
     i = 0;
@@ -611,12 +616,18 @@ function control_center() { // called every time the mouse is idle for 3s and at
   clearTimeout(timeout);
   clearTimeout(timeout2);
   clearInterval(interval);
-  fishbg.style('display', 'none');
-  if (Math.random() > 0.6) { // randomly either play through the data or play movie
-    play_data();
-  } else {
-    play_movie();
-  }
+  setTimeout(function() {
+    fishbg.style('display', 'none'); // ?
+    var rand = Math.random();
+    if (rand > 0.93) {
+      control_center(); // wait another second
+    }
+    else if (rand > 0.6) {
+      play_data();
+    } else {
+      play_movie();
+    }
+  }, 1000);
 }
 
 function mousemoved() {
@@ -645,7 +656,7 @@ function mousemoved() {
       total_kw += values[0][i];
       kw_count++;
     }
-    accum.text(accumulation(elapsed, total_kw/kw_count, current_state));
+    accum.text(accumulation((elapsed.getTime() - times[0].getTime())/1000, total_kw/kw_count, current_state));
     if (current_state === 1) {
       clearInterval(electricity_timer);
       electricity_timer = setInterval(electric_anim, rv/10);
@@ -731,11 +742,12 @@ function animate_to(frame) {
 }
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
-    charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/main_frames/frame_"+frames.shift()+".gif");
+    charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
   }
 }, 8);
 
 function play_data() {
+  fishbg.style('display', 'none');
   anim_container.style('display', 'initial');
   var end_i = Math.ceil(current_path_len), total_kw = 0,
       i = 0, i2 = 0; // i2 is to jerk circle2 representing the typical use forward if the circle representing current use has to because of null data
@@ -801,7 +813,6 @@ function typical_data(time) {
   var week = time.getDay(),
       hrs = time.getHours();
   var hash = week.toString() + hrs.toString();
-  // console.log(hash);
   return bands[hash];
   <?php } else { ?>
   var mins = time.getMinutes(),
@@ -815,7 +826,6 @@ function typical_data(time) {
     hrs = hrs + 1;
   }
   var hash = hrs.toString() + mins.toString();
-  // console.log(hash);
   return bands[hash];
   <?php } ?>
 }
