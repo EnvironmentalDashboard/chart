@@ -353,39 +353,6 @@ document.getElementById('historical-toggle').addEventListener('click', function(
     historical_shown = true;
   }
 });
-// general functions
-function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); } // how is this not built into js?
-function typical_data(time) {
-  <?php if ($time_frame === 'week') { ?>
-  var week = time.getDay(),
-      hrs = time.getHours();
-  var hash = week.toString() + hrs.toString();
-  // console.log(hash);
-  return bands[hash];
-  <?php } else { ?>
-  var mins = time.getMinutes(),
-      hrs = time.getHours();
-  mins = Math.round(mins / 15) * 15; // round to nearest 15 minute
-  if (mins < 10) {
-    mins = '0' + mins;
-  }
-  else if (mins == 60) {
-    mins = '00';
-    hrs = hrs + 1;
-  }
-  var hash = hrs.toString() + mins.toString();
-  // console.log(hash);
-  return bands[hash];
-  <?php } ?>
-}
-function set_relative_value(typical, current) {
-  var count = typical.length;
-  // console.log(typical, current);
-  var copy = typical.slice();
-  copy.push(current);
-  copy.sort(function(a,b) {return a-b;});
-  rv = (copy.indexOf(current) / (count)) * 100;
-}
 // set vars
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
     values = <?php echo json_encode($values) ?>,
@@ -493,7 +460,16 @@ co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberli
 var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%');
 var smoke2 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%');
 var smoke3 = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%');
+var current_smoke = [];
 function co2_animation() {
+  current_smoke.forEach(function(cloud) {
+    cloud.remove();
+  });
+  current_smoke = [];
+  for (var i = Math.round(rv); i >= 0; i--) {
+    var cloud = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,10)/10))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
+    current_smoke.push(cloud);
+  }
   var smoke1tran = smoke1.transition().duration(4000),
       smoke2tran = smoke2.transition().duration(4000),
       smoke3tran = smoke3.transition().duration(4000);
@@ -511,11 +487,8 @@ function co2_animation() {
     var i = d3.interpolateString("translate(0,0) scale(1)", "translate("+x3+",-800) scale(3)");
     return function(t) { smoke3.attr("transform", i(t)); };
   });
-  // smoke2tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000);
-  // smoke3tran.attr("transform", "translate(300, -300)").style('opacity', 0).duration(4000).on('end', co2_animation);
-  smoke1tran.on('end', co2_animation);
+  // smoke1tran.on('end', co2_animation);
 }
-co2_animation();
 // money animation
 money_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
@@ -673,7 +646,14 @@ function mousemoved() {
       kw_count++;
     }
     accum.text(accumulation(elapsed, total_kw/kw_count, current_state));
-    if (current_state === 3) {
+    if (current_state === 1) {
+      clearInterval(electricity_timer);
+      electricity_timer = setInterval(electric_anim, rv/10);
+    }
+    else if (current_state === 2) {
+      co2_animation();
+    }
+    else if (current_state === 3) {
       tree_leaves(Math.floor(index));
     }
   }
@@ -712,7 +692,7 @@ function menu_click() {
     grass.style('display', 'initial');
     kwh_rect.style('fill', '#3498db');
     kwh_text.style('fill', '#3498db');
-    electricity_timer = setInterval(electric_anim, 1/rv);
+    electricity_timer = setInterval(electric_anim, rv/10);
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
@@ -774,7 +754,10 @@ function play_data() {
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
     animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
-    if (current_state === 3) {
+    if (current_state === 2) {
+      co2_animation();
+    }
+    else if (current_state === 3) {
       tree_leaves(index);
     }
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
@@ -813,6 +796,54 @@ function play_movie() {
   xmlHttp.send(null);
 }
 
+function typical_data(time) {
+  <?php if ($time_frame === 'week') { ?>
+  var week = time.getDay(),
+      hrs = time.getHours();
+  var hash = week.toString() + hrs.toString();
+  // console.log(hash);
+  return bands[hash];
+  <?php } else { ?>
+  var mins = time.getMinutes(),
+      hrs = time.getHours();
+  mins = Math.round(mins / 15) * 15; // round to nearest 15 minute
+  if (mins < 10) {
+    mins = '0' + mins;
+  }
+  else if (mins == 60) {
+    mins = '00';
+    hrs = hrs + 1;
+  }
+  var hash = hrs.toString() + mins.toString();
+  // console.log(hash);
+  return bands[hash];
+  <?php } ?>
+}
+
+function set_relative_value(typical, current) {
+  var count = typical.length;
+  // console.log(typical, current); // this is important
+  var copy = typical.slice();
+  copy.push(current);
+  copy.sort(function(a,b) {return a-b;});
+  rv = (copy.indexOf(current) / (count)) * 100;
+}
+
+function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
+  var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
+  // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
+  if (current_state === 0 || current_state === 1) {
+    return format(kwh); // kWh = time elapsed in hours * kilowatts so far
+  }
+  else if (current_state === 2) {
+    return format(kwh*1.22); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
+  } else if (current_state === 3) {
+    return '$' + format(kwh*0.11); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
+  }
+}
+
+function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); } // how is this not built into js?
+
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
   // var mouseDate = xScale.invert(point[0]);
@@ -838,19 +869,6 @@ function closestPoint(pathNode, point) {
     }
   }
   return pos
-}
-
-function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
-  var kwh = (time_sofar/3600)*avg_kw; // the number of hours in time period * the average kw reading
-  // console.log('time elapsed in hours: '+(time_sofar/3600)+"\navg_kw: "+ avg_kw+"\nkwh: "+kwh);
-  if (current_state === 0 || current_state === 1) {
-    return format(kwh); // kWh = time elapsed in hours * kilowatts so far
-  }
-  else if (current_state === 2) {
-    return format(kwh*1.22); // pounds of co2 per kwh https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11
-  } else if (current_state === 3) {
-    return '$' + format(kwh*0.11); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
-  }
 }
 
 function convertRange(val, old_min, old_max, new_min, new_max) {
