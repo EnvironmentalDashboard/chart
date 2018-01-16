@@ -32,7 +32,7 @@ $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
 require_once '../includes/db.php';
 require_once '../includes/class.Meter.php';
-require_once 'includes/find_nearest.php';
+require_once 'includes/normalize.php';
 require_once 'includes/median.php';
 require_once 'includes/change_res.php';
 define('NULL_DATA', true); // set to false to fill in data
@@ -116,16 +116,10 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
       continue;
     }
   }
-  foreach ($times as $time) {
-    $best_guess = find_nearest($data, $time, NULL_DATA);
-    $values[$i][] = $best_guess;
-    if ($best_guess !== null && $best_guess > $max) {
-      $max = $best_guess;
-    }
-    if ($best_guess !== null && $best_guess < $min) {
-      $min = $best_guess;
-    }
-  }
+  $result = normalize($data, $times, $min, $max, NULL_DATA);
+  $values[$i] = $result[0];
+  $min = $result[1];
+  $max = $result[2];
 }
 
 // calculate the typical line
@@ -198,16 +192,10 @@ if ($typical_time_frame) {
 // get historical data for first meter
 $data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
 if (!empty($data)) {
-  foreach (array_slice(range($double_time, $from, $increment), -$num_points) as $time) { // need new $times that is exactly $num_points long
-    $best_guess = find_nearest($data, $time, NULL_DATA);
-    $values[$total_charts][] = $best_guess; // historical chart is last chart in $values
-    if ($best_guess !== null && $best_guess > $max) {
-      $max = $best_guess;
-    }
-    if ($best_guess !== null && $best_guess < $min) {
-      $min = $best_guess;
-    }
-  }
+  $result = normalize($data, array_slice(range($double_time, $from, $increment), -$num_points), $min, $max, NULL_DATA);
+  $values[$total_charts] = $result[0];
+  $min = $result[1];
+  $max = $result[2];
 }
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
@@ -474,7 +462,7 @@ function co2_animation() {
   });
   current_smoke = [];
   for (var i = Math.round(rv); i >= 0; i--) {
-    var cloud = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,10)/10))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
+    var cloud = co2_anim.append('image').attr('xlink:href', 'https://oberlindashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
     current_smoke.push(cloud);
   }
   var smoke1tran = smoke1.transition().duration(4000),
@@ -584,8 +572,9 @@ svg.append("rect") // circle moves when mouse is over this rect
   .on("mousemove", mousemoved);
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
 var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
-svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.5).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
-var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.5).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours ' : 'Gallons so far '; echo ($time_frame === 'day') ? 'today' : $time_frame;  ?>").style('font-size', '1.25vw').attr('class', 'bolder');
+svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.3).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
+var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.3).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>").style('font-size', '1.25vw').attr('class', 'bolder');
+svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text('<?php echo ($time_frame === 'day') ? 'today' : $time_frame;  ?>').attr('class', 'bolder').attr('font-size', '1.25vw');
 //draw legend
 var x = margin.left,
     i = 0;
@@ -617,7 +606,7 @@ function control_center() { // called every time the mouse is idle for 3s and at
   clearTimeout(timeout2);
   clearInterval(interval);
   setTimeout(function() {
-    fishbg.style('display', 'none'); // ?
+    <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');\n"; } ?>
     var rand = Math.random();
     if (rand > 0.93) {
       control_center(); // wait another second
@@ -688,7 +677,7 @@ function menu_click() {
   current_state = parseInt(this.getAttribute('data-option'));
   accum.text(accumulation(time_elapsed, avg_kw_at_end, current_state));
   if (current_state === 0) {
-    accum_units.text('Kilowatt-hours today');
+    accum_units.text('<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>');
     kwh_anim.style('display', 'none');
     co2_anim.style('display', 'none');
     money_anim.style('display', 'none');
@@ -696,7 +685,7 @@ function menu_click() {
     icon_rect.style('fill', '#3498db');
     icon.style('fill', '#3498db');
   } else if (current_state === 1) {
-    accum_units.text('Kilowatt-hours today');
+    accum_units.text('<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>');
     kwh_anim.style('display', 'initial');
     co2_anim.style('display', 'none');
     money_anim.style('display', 'none');
@@ -747,7 +736,7 @@ setInterval(function() { // outside is best for performance
 }, 8);
 
 function play_data() {
-  fishbg.style('display', 'none');
+  <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');"; } ?>
   anim_container.style('display', 'initial');
   var end_i = Math.ceil(current_path_len), total_kw = 0,
       i = 0, i2 = 0; // i2 is to jerk circle2 representing the typical use forward if the circle representing current use has to because of null data
@@ -796,11 +785,13 @@ function play_movie() {
       console.log(split);
       var len = split[1];
       var name = split[0];
-      var fishbg_name = split[2];
       charachter.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+name+".gif");
+      <?php if ($charachter === 'fish') { ?>
+      var fishbg_name = split[2];
       if (fishbg_name != 'none') {
         fishbg.attr("xlink:href", "https://oberlindashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
       }
+      <?php } ?>
       timeout2 = setTimeout(play_data, len);
     }
   }
