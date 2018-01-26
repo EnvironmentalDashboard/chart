@@ -410,11 +410,11 @@ var avg_kw_at_end = total_kw/kw_count,
 // grass is in all animations
 grass.append('rect').attr('width', charachter_width).attr('height', chart_height/2).attr('x', chart_width + margin.left).attr('y', svg_height - margin.bottom - charachter_height).attr('fill', '#B4E3F4');
 grass.append('rect').attr('width', charachter_width).attr('height', chart_height).attr('x', chart_width + margin.left).attr('y', '60%').attr('fill', 'rgb(129, 176, 64)');
-grass.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '52%');
-grass.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '57%');
+grass.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '52%');
+grass.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/ground.svg').attr('width', charachter_width).attr('x', chart_width + margin.left).attr('y', '57%');
 // kwh animation
-kwh_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
-kwh_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
+kwh_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/houses.png').attr('width', charachter_width/1.5).attr('x', chart_width + margin.left + (charachter_width/5)).attr('y', '65%');
+kwh_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/powerline.svg').attr('x', chart_width + margin.left).attr('y', '50%').attr('width', charachter_width/3);
 kwh_anim.append('rect').attr('height', svg_height/4).attr('width', svg_height/50).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '75%').attr('x', margin.left+chart_width+(charachter_width*.8)).attr('stroke-linejoin', 'round');
 kwh_anim.append('rect').attr('height', svg_height/90).attr('width', svg_height/6).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '73%').attr('x', (margin.left+chart_width+(charachter_width*.8))-((svg_height/12)-(svg_height/90)));
 kwh_anim.append('rect').attr('height', svg_height/90).attr('width', svg_height/6).attr('fill', 'white').attr('stroke-width', svg_width/1000).attr('stroke','black').attr('y', '75%').attr('x', (margin.left+chart_width+(charachter_width*.8))-((svg_height/12)-(svg_height/90)));
@@ -452,23 +452,23 @@ var electricity_timer = null;
 
 
 // co2 animation
-co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
-co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
-co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '43%');
-co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '43%');
-var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%');
-var smoke2 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%');
-var smoke3 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%');
+co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
+co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '43%');
+co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '43%');
+co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smokestack/smokestack1.png').attr('width', charachter_width*.6).attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '43%');
+var smoke1 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.1)).attr('y', '55%');
+var smoke2 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.2)).attr('y', '55%');
+var smoke3 = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*.3)).attr('y', '55%');
 var current_smoke = [];
 function co2_animation(index) {
   // console.log(values[0][index]); // current reading
-  pct_done = index/(pct_thru(1));
+  // pct_done = index/(pct_thru(1));
   current_smoke.forEach(function(cloud) {
     cloud.remove();
   });
   current_smoke = [];
   for (var i = Math.round(rv); i >= 0; i--) {
-    var cloud = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
+    var cloud = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
     current_smoke.push(cloud);
   }
   var smoke1tran = smoke1.transition().duration(4000),
@@ -490,7 +490,7 @@ function co2_animation(index) {
   });
 }
 // money animation
-money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
+money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/tree.svg').attr('width', charachter_width).attr('x', margin.left + chart_width).attr('y', '20%');
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
 var current_leaves = [];
 function tree_leaves() {
@@ -499,7 +499,7 @@ function tree_leaves() {
   });
   current_leaves = [];
   for (var i = Math.round(rv); i >= 0; i--) {
-    var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/oberlin/cwd/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+    var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
     current_leaves.push(leaf);
   }
 }
@@ -736,7 +736,7 @@ function animate_to(frame) {
 }
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
-    charachter.attr("xlink:href", "https://environmentaldashboard.org/oberlin/time-series/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
+    charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
   }
 }, 8);
 
@@ -782,7 +782,7 @@ function play_movie() {
   frames = [];
   anim_container.style('display', 'none');
   // console.log(rv);
-  var url = 'https://environmentaldashboard.org/oberlin/time-series/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
+  var url = 'https://environmentaldashboard.org/chart/movie.php?relative_value=' + rv + '&count=' + (++movies_played) + '&charachter=<?php echo $charachter ?>';
   var xmlHttp = new XMLHttpRequest(); // https://stackoverflow.com/a/4033310/2624391
   xmlHttp.onreadystatechange = function() {
     if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
@@ -790,11 +790,11 @@ function play_movie() {
       console.log(split);
       var len = split[1];
       var name = split[0];
-      charachter.attr("xlink:href", "https://environmentaldashboard.org/oberlin/time-series/images/"+name+".gif");
+      charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/"+name+".gif");
       <?php if ($charachter === 'fish') { ?>
       var fishbg_name = split[2];
       if (fishbg_name != 'none') {
-        fishbg.attr("xlink:href", "https://environmentaldashboard.org/oberlin/time-series/images/"+fishbg_name+".gif").style('display', 'initial');
+        fishbg.attr("xlink:href", "https://environmentaldashboard.org/chart/images/"+fishbg_name+".gif").style('display', 'initial');
       }
       <?php } ?>
       timeout2 = setTimeout(play_data, len);
