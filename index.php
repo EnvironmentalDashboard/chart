@@ -499,7 +499,7 @@ function tree_leaves() {
   });
   current_leaves = [];
   for (var i = Math.round(rv); i >= 0; i--) {
-    var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/banknote.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+    var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/dollar.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
     current_leaves.push(leaf);
   }
 }
