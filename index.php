@@ -173,7 +173,7 @@ if ($typical_time_frame) {
     if ($stmt->rowCount() > 0) {
       foreach ($stmt->fetchAll() as $row) {
         // 'wG' = week, hours
-        $bands[date('wG')][] = (float) $row['value'];
+        $bands[date('wG', $row['recorded'])][] = (float) $row['value'];
       }
       $keys = array_keys($bands);
       sort($keys);
@@ -200,6 +200,9 @@ if (!empty($data)) {
   $values[$total_charts] = $result[0];
   $min = $result[1];
   $max = $result[2];
+  if ($time_frame === 'day') {
+    $bands = $result[0];
+  }
 }
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
@@ -810,7 +813,7 @@ function typical_data(time) {
       hrs = time.getHours();
   var hash = week.toString() + hrs.toString();
   return bands[hash];
-  <?php } else { ?>
+  <?php } elseif ($time_frame === 'day') { ?>
   var mins = time.getMinutes(),
       hrs = time.getHours();
   mins = Math.round(mins / 15) * 15; // round to nearest 15 minute
@@ -823,6 +826,8 @@ function typical_data(time) {
   }
   var hash = hrs.toString() + mins.toString();
   return bands[hash];
+  <?php } else { // hour ?>
+  return bands[Math.round(xScale(time))];
   <?php } ?>
 }
 
