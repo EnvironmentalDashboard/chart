@@ -123,7 +123,6 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
 }
 
 // calculate the typical line
-$bands = [];
 $typical_line = []; // formed by taking the median of each sub array value in $bands
 $typical_time_frame = ($time_frame === 'day' || $time_frame === 'week'); // there is only enough data to do the relative value calculation with these resolutions
 if ($typical_time_frame) {
@@ -145,6 +144,9 @@ if ($typical_time_frame) {
     }
   }
   if ($time_frame === 'day') {
+    $hash_arr = array_map(function($t) { return date('Gi', $t); }, $times); // 'Gi' = hours and minutes (mins padded with 0s)
+    $bands = array_fill_keys($hash_arr, array_fill(0, $npoints, null));
+    $counter = array_fill_keys($hash_arr, 0);
     $stmt = $db->prepare( // get npoints days worth of data
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND resolution = ?
@@ -153,18 +155,26 @@ if ($typical_time_frame) {
     $stmt->execute([$meter0, 'quarterhour', $from]);
     if ($stmt->rowCount() > 0) {
       foreach ($stmt->fetchAll() as $row) {
-        // 'Gi' = hours and minutes (mins padded with 0s)
-        $bands[date('Gi', $row['recorded'])][] = (float) $row['value'];
+        $hash = date('Gi', $row['recorded']);
+        $bands[$hash][$counter[$hash]++] = (float) $row['value'];
       }
-      $keys = array_keys($bands);
-      sort($keys);
-      foreach ($keys as $time) {
-        $typical_line[] = median($bands[$time]);
-        sort($bands[$time]);
+      foreach ($hash_arr as $time) {
+        $filtered = array_filter($bands[$time]);
+        if (count($filtered) > 0) {
+          $typical_line[] = median($filtered);
+          sort($filtered);
+          $bands[$time] = $filtered;
+        } else {
+          $typical_line[] = null;
+          $bands[$time] = [];
+        }
       }
       $typical_line = change_res($typical_line, $num_points);
     }
   } else { // week
+    $hash_arr = array_map(function($t) { return date('wG', $t); }, $times); // 'wG' = week, hours
+    $bands = array_fill_keys($hash_arr, array_fill(0, $npoints, null));
+    $counter = array_fill_keys($hash_arr, 0);
     $stmt = $db->prepare( // https://stackoverflow.com/a/7786588/2624391
     'SELECT value, recorded FROM meter_data
     WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded < ?
@@ -172,14 +182,19 @@ if ($typical_time_frame) {
     $stmt->execute([$meter0, 'hour', $from]);
     if ($stmt->rowCount() > 0) {
       foreach ($stmt->fetchAll() as $row) {
-        // 'wG' = week, hours
-        $bands[date('wG', $row['recorded'])][] = (float) $row['value'];
+        $hash = date('wG', $row['recorded']);
+        $bands[$hash][$counter[$hash]++] = (float) $row['value'];
       }
-      $keys = array_keys($bands);
-      sort($keys);
-      foreach ($keys as $time) {
-        $typical_line[] = median($bands[$time]);
-        sort($bands[$time]);
+      foreach ($hash_arr as $time) {
+        $filtered = array_filter($bands[$time]);
+        if (count($filtered) > 0) {
+          $typical_line[] = median($filtered);
+          sort($filtered);
+          $bands[$time] = $filtered;
+        } else {
+          $typical_line[] = null;
+          $bands[$time] = [];
+        }
       }
       $typical_line = change_res($typical_line, $num_points);
     }
@@ -200,9 +215,6 @@ if (!empty($data)) {
   $values[$total_charts] = $result[0];
   $min = $result[1];
   $max = $result[2];
-  if ($time_frame === 'day') {
-    $bands = $result[0];
-  }
 }
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
@@ -827,7 +839,7 @@ function typical_data(time) {
   var hash = hrs.toString() + mins.toString();
   return bands[hash];
   <?php } else { // hour ?>
-  return bands[Math.round(xScale(time))];
+  return [bands[Math.round(xScale(time))]];
   <?php } ?>
 }
 
