@@ -201,7 +201,6 @@ if ($typical_time_frame) {
   }
   // $accumulation = [];
   // foreach ($bands as $band) {
-  //   # code...
   // }
   if (count($typical_line) > 0) {
     $values[] = $typical_line; // typical line is 2nd to last chart in $values
@@ -215,6 +214,9 @@ if (!empty($data)) {
   $values[$total_charts] = $result[0];
   $min = $result[1];
   $max = $result[2];
+  if ($time_frame === 'hour') {
+    $bands = $result[0];
+  }
 }
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
@@ -366,8 +368,9 @@ var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {
     values0length = values[0].length,
     bands = <?php echo json_encode($bands) ?>,
     rv = 0,
+    accum = 0,
     svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
-    svg_height = svg_width / 2.75;
+    svg_height = svg_width / <?php echo (isset($_GET['height'])) ? $_GET['height'] : '2.75' ?>;
 for (var i = values[0].length-1; i >= 0; i--) { // calc real width
   if (values[0][i] !== null) {
     break;
@@ -478,13 +481,16 @@ var current_smoke = [];
 function co2_animation(index) {
   // console.log(values[0][index]); // current reading
   // pct_done = index/(pct_thru(1));
-  current_smoke.forEach(function(cloud) {
-    cloud.remove();
-  });
-  current_smoke = [];
-  for (var i = Math.round(rv); i >= 0; i--) {
-    var cloud = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
-    current_smoke.push(cloud);
+  if (current_smoke.length < accum) {
+    for (var i = (Math.round(accum) - current_smoke.length) - 1; i >= 0; i--) {
+      var cloud = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
+      current_smoke.push(cloud);
+    }
+  } else {
+    for (var i = current_smoke.length - 1; i >= accum; i--) {
+      current_smoke[i].remove();
+      current_smoke.pop();
+    }
   }
   var smoke1tran = smoke1.transition().duration(4000),
       smoke2tran = smoke2.transition().duration(4000),
@@ -509,13 +515,16 @@ money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.or
 money_anim.append('ellipse').attr('cx', margin.left + chart_width + (charachter_width/2)).attr('cy', '80%').attr('rx', 100).attr('ry', 50).attr('fill', 'url(#dirt_grad)');
 var current_leaves = [];
 function tree_leaves() {
-  current_leaves.forEach(function(leaf) {
-    leaf.remove();
-  });
-  current_leaves = [];
-  for (var i = Math.round(rv); i >= 0; i--) {
-    var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/dollar.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
-    current_leaves.push(leaf);
+  if (current_leaves.length < accum) {
+    for (var i = (Math.round(accum) - current_leaves.length) - 1; i >= 0; i--) {
+      var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/dollar.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+      current_leaves.push(leaf);
+    }
+  } else {
+    for (var i = current_leaves.length - 1; i >= accum; i--) {
+      current_leaves[i].remove();
+      current_leaves.pop();
+    }
   }
 }
 // end animations
@@ -591,7 +600,7 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
 var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
-var accum = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
+var accum_text = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.3).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.3).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text('<?php echo ($time_frame === 'day') ? 'today' : $time_frame;  ?>').attr('class', 'bolder').attr('font-size', '1.25vw');
@@ -657,6 +666,7 @@ function mousemoved() {
         current = yScale.invert(p['y']);
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
+    set_accumulation(rv, elapsed);
     animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
     current_reading.text(d3.format('.2s')(current));
     var total_kw = 0,
@@ -665,7 +675,7 @@ function mousemoved() {
       total_kw += values[0][i];
       kw_count++;
     }
-    accum.text(accumulation((elapsed.getTime() - times[0].getTime())/1000, total_kw/kw_count, current_state));
+    accum_text.text(accumulation((elapsed.getTime() - times[0].getTime())/1000, total_kw/kw_count, current_state));
     if (current_state === 1) {
       clearInterval(electricity_timer);
       electricity_timer = setInterval(electric_anim, rv/10);
@@ -695,7 +705,7 @@ function menu_click() {
     $text.style('fill', '#37474F');
   }
   current_state = parseInt(this.getAttribute('data-option'));
-  accum.text(accumulation(time_elapsed, avg_kw_at_end, current_state));
+  accum_text.text(accumulation(time_elapsed, avg_kw_at_end, current_state));
   if (current_state === 0) {
     accum_units.text('<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>');
     kwh_anim.style('display', 'none');
@@ -784,7 +794,7 @@ function play_data() {
     // console.log(values[0][Math.floor((i/end_i)*values0length)], Math.floor((i/end_i)*values0length), values0length);
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
-    accum.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, current_state));
+    accum_text.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, current_state));
     if (i > end_i) {
       control_center();
     }
@@ -850,6 +860,17 @@ function set_relative_value(typical, current) {
   copy.push(current);
   copy.sort(function(a,b) {return a-b;});
   rv = (copy.indexOf(current) / (count)) * 100;
+}
+
+var last_time = times[0];
+// var powerScale = d3.scalePow().exponent(0.5).domain([0, 10000]).range([0, 100]);
+function set_accumulation(rv, time) {
+  var diff = (time-last_time)/10000;
+  // console.log(time-last_time);
+  accum += (diff*rv)/10000;
+  last_time = time;
+  console.log(accum);
+  // console.log(powerScale(accum));
 }
 
 function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
