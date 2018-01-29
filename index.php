@@ -238,10 +238,14 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
 if ($title_img || $title_txt) {
   echo '<div class="Grid Grid--gutters Grid--center" style=\'margin:0px\'>';
   if ($title_img) {
-    echo "<div class='Grid-cell' style='flex: 0 0 8%;padding:0px;'><img src='https://placehold.it/150x150' /></div>";
+    $building_img = $meter->getBuildingImage($meter0);
+    if ($building_img == null) {
+      $building_img = 'https://placehold.it/150x150';
+    }
+    echo "<div class='Grid-cell' style='flex: 0 0 8%;padding:0px;'><img src='{$building_img}' /></div>";
   }
   if ($title_txt) {
-    echo "<div class='Grid-cell'><h1 style='display:inline'>".$meter->getBuildingName($meter0).' '.$meter->getName($meter0)."</h1></div>";
+    echo "<div class='Grid-cell'><h1>".$meter->getBuildingName($meter0).' '.$meter->getName($meter0)."</h1></div>";
   }
   echo '</div>';
 }
