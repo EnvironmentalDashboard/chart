@@ -159,7 +159,7 @@ if ($typical_time_frame) {
         $bands[$hash][$counter[$hash]++] = (float) $row['value'];
       }
       foreach ($hash_arr as $time) {
-        $filtered = array_filter($bands[$time]);
+        $filtered = array_values(array_filter($bands[$time]));
         if (count($filtered) > 0) {
           $typical_line[] = median($filtered);
           sort($filtered);
@@ -186,7 +186,7 @@ if ($typical_time_frame) {
         $bands[$hash][$counter[$hash]++] = (float) $row['value'];
       }
       foreach ($hash_arr as $time) {
-        $filtered = array_filter($bands[$time]);
+        $filtered = array_values(array_filter($bands[$time]));
         if (count($filtered) > 0) {
           $typical_line[] = median($filtered);
           sort($filtered);
