@@ -522,6 +522,9 @@ function tree_leaves() {
   if (current_leaves.length < accum) {
     for (var i = (Math.round(accum) - current_leaves.length) - 1; i >= 0; i--) {
       var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/dollar.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
+      if (Math.random() > 0.7) {
+        leaf.transition().duration(2000).attr('y', getRandomInt(chart_height/.8, chart_height));
+      }
       current_leaves.push(leaf);
     }
   } else {
@@ -682,7 +685,7 @@ function mousemoved() {
     accum_text.text(accumulation((elapsed.getTime() - times[0].getTime())/1000, total_kw/kw_count, current_state));
     if (current_state === 1) {
       clearInterval(electricity_timer);
-      electricity_timer = setInterval(electric_anim, rv/10);
+      electricity_timer = setInterval(electric_anim, (100-rv)/5);
     }
     else if (current_state === 2) {
       co2_animation(Math.floor(index));
@@ -726,7 +729,7 @@ function menu_click() {
     grass.style('display', 'initial');
     kwh_rect.style('fill', '#3498db');
     kwh_text.style('fill', '#3498db');
-    electricity_timer = setInterval(electric_anim, rv/10);
+    electricity_timer = setInterval(electric_anim, (100-rv)/5);
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
@@ -873,7 +876,7 @@ function set_accumulation(rv, time) {
   // console.log(time-last_time);
   accum += (diff*rv)/10000;
   last_time = time;
-  console.log(accum);
+  // console.log(accum);
   // console.log(powerScale(accum));
 }
 
