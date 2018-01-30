@@ -1,0 +1,1 @@
+`/var/repos/daemons/buildingosd -vo -rhour 2>&1`
