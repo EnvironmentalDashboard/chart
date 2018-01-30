@@ -320,7 +320,7 @@ if ($title_img || $title_txt) {
   </defs>
   <rect id="background" />
 </svg>
-<p><a href="<?php echo $_SERVER['REQUEST_URI'] ?>&reset=on"></a></p>
+<p style='margin-top: 10px;margin-right:3px;font-size: 10px;text-align: right;'>Seeing gaps in data? <a href="<?php echo $_SERVER['REQUEST_URI'] ?>&reset=on" style='color:#999;'>Reset meter</a>.</p>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
