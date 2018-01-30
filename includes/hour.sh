@@ -1,1 +1,1 @@
-`/var/repos/daemons/buildingosd -vo -rhour 2>&1`
+echo `/var/repos/daemons/buildingosd -vo -rhour 2>&1`
