@@ -46,8 +46,8 @@ if (isset($_GET['reset'])) {
   $stmt->execute([$meter0, 'live']);
   $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
   $stmt->execute([$meter0]);
-  $quarterhour_data = exec('/var/repos/daemons/buildingosd -vo -rquarterhour');
-  $hour_data = exec('/var/repos/daemons/buildingosd -vo -rhour');
+  $quarterhour_data = shell_exec('/var/repos/daemons/buildingosd -vo -rquarterhour');
+  $hour_data = shell_exec('/var/repos/daemons/buildingosd -vo -rhour');
   echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped in CSV format below.<br>";
   echo "<pre>meter_id,value,recorded,resolution\n\n{$quarterhour_data}\n\n\n\n\n\n\n{$hour_data}</pre>";
   exit();
