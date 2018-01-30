@@ -41,6 +41,17 @@ define('QUARTERHOUR', 900);
 define('HOUR', 3600);
 define('DAY', 86400);
 define('WEEK', 604800);
+if (isset($_GET['reset'])) {
+  $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND resolution != ?');
+  $stmt->execute([$meter0, 'live']);
+  $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
+  $stmt->execute([$meter0]);
+  $quarterhour_data = exec('/var/repos/daemons/buildingosd -vo -rquarterhour');
+  $hour_data = exec('/var/repos/daemons/buildingosd -vo -rhour');
+  echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped in CSV format below.<br>";
+  echo "<pre>meter_id,value,recorded,resolution\n\n{$quarterhour_data}\n\n\n\n\n\n\n{$hour_data}</pre>";
+  exit();
+}
 $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
@@ -309,6 +320,7 @@ if ($title_img || $title_txt) {
   </defs>
   <rect id="background" />
 </svg>
+<p><a href="<?php echo $_SERVER['REQUEST_URI'] ?>&reset=on"></a></p>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
@@ -490,7 +502,7 @@ function co2_animation(index) {
       var cloud = co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/smoke.png').attr('x', margin.left + chart_width + (charachter_width*(getRandomInt(0,100)/100))).attr('y', getRandomInt(20, 40)+'%').attr('width', getRandomInt(30,80));
       current_smoke.push(cloud);
     }
-  } else {
+  } else if (current_smoke.length > 0) {
     for (var i = current_smoke.length - 1; i >= accum; i--) {
       current_smoke[i].remove();
       current_smoke.pop();
@@ -523,11 +535,11 @@ function tree_leaves() {
     for (var i = (Math.round(accum) - current_leaves.length) - 1; i >= 0; i--) {
       var leaf = money_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/dollar.svg').attr('height', svg_width*.02).attr('height', svg_width*.02).attr('x', getRandomInt(margin.left + chart_width, svg_width)).attr('y', getRandomInt(svg_height - charachter_height, 0.5*svg_height-margin.bottom));
       if (Math.random() > 0.7) {
-        leaf.transition().duration(2000).attr('y', getRandomInt(chart_height/.8, chart_height));
+        leaf.transition().duration(2000).attr('y', getRandomInt(chart_height, chart_height/.8));
       }
       current_leaves.push(leaf);
     }
-  } else {
+  } else if (current_leaves.length > 0) {
     for (var i = current_leaves.length - 1; i >= accum; i--) {
       current_leaves[i].remove();
       current_leaves.pop();
