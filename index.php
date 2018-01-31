@@ -3,7 +3,7 @@ error_reporting(-1);
 ini_set('display_errors', 'On');
 date_default_timezone_set('America/New_York');
 // do this before importing/defining anything to whitelist select variables to be imported with extract()
-if (!isset($_GET['meter0'])) { // at minimum this script needs a meter id to chart
+if (!isset($_GET['meter0']) || !is_numeric($_GET['meter0'])) { // at minimum this script needs a meter id to chart
   // $_GET['meter0'] = 415; // default meter
   require 'create.php';
   exit();
@@ -41,20 +41,22 @@ define('QUARTERHOUR', 900);
 define('HOUR', 3600);
 define('DAY', 86400);
 define('WEEK', 604800);
-if (isset($_GET['reset'])) {
-  $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND resolution != ?');
-  $stmt->execute([$meter0, 'live']);
-  $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
-  $stmt->execute([$meter0]);
-  $quarterhour_data = shell_exec('includes/quarterhour.sh'); // for some reason I need a wrapper for this to work
-  $hour_data = shell_exec('includes/hour.sh');
-  echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped in CSV format below.<br>";
-  echo "<pre>meter_id,value,recorded,resolution\n\n{$quarterhour_data}\n\n\n\n\n\n\n{$hour_data}</pre>";
-  exit();
-}
 $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
+if (isset($_GET['reset'])) {
+  require_once '../includes/class.BuildingOS.php';
+  $bos = new BuildingOS($db, $db->query("SELECT id FROM api WHERE user_id = {$user_id} LIMIT 1")->fetchColumn());
+  $qh_json = $bos->resetMeter($meter0, 'quarterhour');
+  $hr_json = $bos->resetMeter($meter0, 'hour');
+  $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = ?, hour_last_updated = ? WHERE id = ?');
+  $stmt->execute([$now, $now, $meter0]);
+  echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped below, respectively.<br>";
+  var_dump($qh_json);
+  echo "<br><br><br><br><br>";
+  var_dump($hr_json);
+  exit();
+}
 // fish or squirrel?
 $units0 = $meter->getUnits($meter0);
 $resource0 = $meter->getResourceType($meter0);
@@ -320,7 +322,9 @@ if ($title_img || $title_txt) {
   </defs>
   <rect id="background" />
 </svg>
-<p style='margin-top: 10px;margin-right:3px;font-size: 10px;text-align: right;'>Seeing gaps in data? <a href="<?php echo $_SERVER['REQUEST_URI'] ?>&reset=on" style='color:#999;'>Reset meter</a>.</p>
+<?php if (!isset($_GET['reset'])) {
+  echo "<p style='margin-top: 10px;margin-right:3px;font-size: 10px;text-align: right;'>Seeing gaps in data? <a href=\"{$_SERVER['REQUEST_URI']}&reset=on\" style='color:#999;'>Reset meter</a>.</p>";
+} ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.12.0/d3.min.js"></script>
 <script>
 'use strict';
