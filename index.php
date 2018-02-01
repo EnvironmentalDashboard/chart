@@ -47,15 +47,17 @@ $now = time();
 if (isset($_GET['reset'])) {
   require_once '../includes/class.BuildingOS.php';
   $bos = new BuildingOS($db, $db->query("SELECT id FROM api WHERE user_id = {$user_id} LIMIT 1")->fetchColumn());
-  $qh_json = $bos->resetMeter($meter0, 'quarterhour');
-  $hr_json = $bos->resetMeter($meter0, 'hour');
+  $bos->resetMeter($meter0, 'quarterhour');
+  $bos->resetMeter($meter0, 'hour');
   $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = ?, hour_last_updated = ? WHERE id = ?');
   $stmt->execute([$now, $now, $meter0]);
-  echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped below, respectively.<br>";
-  var_dump($qh_json);
-  echo "<br><br><br><br><br>";
-  var_dump($hr_json);
+  header('Location: https://environmentaldashboard.org'.substr($_SERVER['REQUEST_URI'], 0, -9));
   exit();
+  // echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped below, respectively.<br>";
+  // var_dump($qh_json);
+  // echo "<br><br><br><br><br>";
+  // var_dump($hr_json);
+  // exit();
 }
 // fish or squirrel?
 $units0 = $meter->getUnits($meter0);
@@ -174,7 +176,14 @@ if ($typical_time_frame) {
       foreach ($hash_arr as $time) {
         $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
         if (count($filtered) > 0) {
-          $typical_line[] = median($filtered);
+          $median = median($filtered);
+          $typical_line[] = $median;
+          if ($median > $max) {
+            $max = $median;
+          }
+          if ($median < $min) {
+            $min = $median;
+          }
           sort($filtered);
           $bands[$time] = $filtered;
         } else {
@@ -201,7 +210,14 @@ if ($typical_time_frame) {
       foreach ($hash_arr as $time) {
         $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
         if (count($filtered) > 0) {
-          $typical_line[] = median($filtered);
+          $median = median($filtered);
+          $typical_line[] = $median;
+          if ($median > $max) {
+            $max = $median;
+          }
+          if ($median < $min) {
+            $min = $median;
+          }
           sort($filtered);
           $bands[$time] = $filtered;
         } else {
@@ -554,7 +570,7 @@ function tree_leaves() {
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
 // svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
-svg.append('text').attr('x', -svg_height).attr('y', 1).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
+svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
 var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 // d3 scales
@@ -607,10 +623,11 @@ var xaxis = d3.axisBottom(xScale).ticks(<?php echo $xaxis_ticks; ?>, '<?php echo
 var yaxis = d3.axisLeft(yScale).ticks(8, "s");
 svg.append("g")
   .call(xaxis)
-  .attr("transform", "translate("+margin.left+"," + (chart_height+margin.top) + ")");
+  .attr("transform", "translate("+margin.left+"," + (chart_height+margin.top-5) + ")").attr('id', 'xaxis_ticks');
 svg.append("g")
   .call(yaxis)
   .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks').attr('font-size', margin.bottom);
+document.getElementById('xaxis_ticks').childNodes[1].setAttribute('transform', 'translate(20,0)');
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", svg_width/200).attr("stroke", color(0)).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
@@ -644,9 +661,9 @@ if ($typical_time_frame) {
 $legend[] = "Previous {$time_frame}";
 echo json_encode($legend);
 ?>.forEach(function(name) {
-  svg.append('rect').attr('y', 5).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', color(i++));
+  svg.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', color(i++));
   x += margin.top;
-  var el = svg.append('text').attr('y', margin.top / 1.5).attr('x', x).text(name);
+  var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name);
   x += el.node().getBBox().width + (svg_width/50);
 });
 
