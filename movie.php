@@ -37,16 +37,14 @@ if ($keyword === null && $keyword2 === null) {
   $stmt->execute(array($user_id, "%{$keyword}%", "%{$keyword2}%"));
 }
 $result = $stmt->fetch();
-if ($_GET['charachter'] === 'fish') {
-  array_push($result, $bg_name);
-} else {
-  array_push($result, 'none');
-}
-if (empty($result)) { // choose a random default
-  echo 'SQ_Fill_NeutralActionsEyeroll$SEP$18160$SEP$none';
-}
-else {
-  $result[] = "\"{$keyword}\" \"{$keyword2}\"";
+if (is_array($result)) {
+  if ($_GET['charachter'] === 'fish') {
+    array_push($result, $bg_name);
+  } else {
+    array_push($result, 'none');
+  }
   echo implode('$SEP$', $result);
+} else { // choose a random default
+  echo 'SQ_Fill_NeutralActionsEyeroll$SEP$18160$SEP$none';
 }
 ?>
