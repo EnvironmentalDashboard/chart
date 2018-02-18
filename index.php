@@ -377,6 +377,7 @@ document.getElementById('chart-overlay').addEventListener('click', function(e) {
     this.innerHTML = 'Graph overlay &#9652;';
   }
 });
+<?php if ($other_meters !== '') { ?>
 var dropdown_menu2 = document.getElementById('meters-dropdown'),
     dropdown_menu2_shown = false;
 document.getElementById('other-meters').addEventListener('click', function(e) {
@@ -391,6 +392,7 @@ document.getElementById('other-meters').addEventListener('click', function(e) {
     this.innerHTML = 'More meters &#9652;';
   }
 });
+<?php } ?>
 var historical_shown = false;
 document.getElementById('historical-toggle').addEventListener('click', function(e) {
   e.preventDefault();
