@@ -79,7 +79,7 @@ switch ($time_frame) {
     $xaxis_format = '%-I:%M %p';
     $pct_thru = ($now - $from) / HOUR;
     $double_time = $from - HOUR;
-    $xaxis_ticks = 8;
+    $xaxis_ticks = 5;
     break;
   case 'week':
     if (date('w') === '0') { // If it is sunday
@@ -281,8 +281,8 @@ if ($title_img || $title_txt) {
 ?>
 <div class="Grid" style="display:flex;justify-content: space-between;margin: 1.3vw 0px 0px 0px">
   <div>
-    <a href="#" id="chart-overlay" class="btn">Graph overlay</a>
-    <ul class="dropdown" style="display: none" id="chart-dropdown">
+    <a href="#" id="chart-overlay" class="btn">Graph overlay &#9662;</a>
+    <ul class="dropdown" style="display: none;" id="chart-dropdown">
       <a href="#" id="historical-toggle"><li id="historical-toggle-text">Show previous <?php echo $time_frame ?></li></a>
       <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-show="1"><li id="typical-toggle-text">Hide typical</li></a>' : ''; ?>
       <?php for ($i = 1; $i < $charts; $i++) {
@@ -300,25 +300,27 @@ if ($title_img || $title_txt) {
     <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'week'])); ?>" class="btn">Week</a>
   </div>
   <div>
-    <a href="#" id="other-meters" class="btn">Other meters</a>
-    <ul class="dropdown" style="display: none" id="meters-dropdown">
-      <?php 
-      foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
-        AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
-        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
-        OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
-        echo "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
-      }
+    <?php
       foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
         AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
         AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
         ORDER BY units DESC') as $row) {
           echo "<a href='?";
           echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
-          echo "'><li>{$row['resource']}</li></a> \n";
+          echo "' class='btn'>{$row['resource']}</a> \n";
         }
-      ?>
-    </ul>
+      $other_meters = '';
+      foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
+        AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
+        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
+        OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
+        $other_meters .= "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
+      }
+      if ($other_meters !== '') {
+        echo '<a href="#" id="other-meters" class="btn">More meters &#9662;</a>';
+        echo '<ul class="dropdown" style="display: none;" id="meters-dropdown">'.$other_meters.'</ul>';
+      }
+    ?>
   </div>
 </div>
 <svg id="svg">
@@ -366,11 +368,13 @@ var dropdown_menu = document.getElementById('chart-dropdown'),
 document.getElementById('chart-overlay').addEventListener('click', function(e) {
   e.preventDefault();
   if (dropdown_menu_shown) {
-    dropdown_menu.setAttribute('style', 'display:none');
+    dropdown_menu.setAttribute('style', 'display:none;left: 5px;');
     dropdown_menu_shown = false;
+    this.innerHTML = 'Graph overlay &#9662;';
   } else {
-    dropdown_menu.setAttribute('style', '');
+    dropdown_menu.setAttribute('style', 'left: 5px;');
     dropdown_menu_shown = true;
+    this.innerHTML = 'Graph overlay &#9652;';
   }
 });
 var dropdown_menu2 = document.getElementById('meters-dropdown'),
@@ -378,11 +382,13 @@ var dropdown_menu2 = document.getElementById('meters-dropdown'),
 document.getElementById('other-meters').addEventListener('click', function(e) {
   e.preventDefault();
   if (dropdown_menu2_shown) {
-    dropdown_menu2.setAttribute('style', 'display:none');
+    dropdown_menu2.setAttribute('style', 'display:none;right: 5px;');
     dropdown_menu2_shown = false;
+    this.innerHTML = 'More meters &#9662;';
   } else {
-    dropdown_menu2.setAttribute('style', '');
+    dropdown_menu2.setAttribute('style', 'right: 5px;');
     dropdown_menu2_shown = true;
+    this.innerHTML = 'More meters &#9652;';
   }
 });
 var historical_shown = false;
@@ -613,17 +619,20 @@ values.forEach(function(curve, i) {
     .attr("d", area)
     .attr("fill", color(i))
     .attr("opacity", "0.1");
-  <?php echo ($typical_time_frame) ? '}' : ''; ?>
+  <?php
+  echo ($typical_time_frame) ? '}' : '';
+  if ($typical_time_frame) { ?>
   if (i === <?php echo $total_charts ?>) {
     path_g.style('display', 'none');
   }
+  <?php } ?>
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(<?php echo $xaxis_ticks; ?>, '<?php echo $xaxis_format ?>');
 var yaxis = d3.axisLeft(yScale).ticks(8, "s");
 svg.append("g")
   .call(xaxis)
-  .attr("transform", "translate("+margin.left+"," + (chart_height+margin.top-5) + ")").attr('id', 'xaxis_ticks');
+  .attr("transform", "translate("+(margin.left)+"," + (chart_height+margin.top-5) + ")").attr('id', 'xaxis_ticks');
 svg.append("g")
   .call(yaxis)
   .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks').attr('font-size', margin.bottom);
@@ -632,7 +641,7 @@ document.getElementById('xaxis_ticks').childNodes[1].setAttribute('transform', '
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", svg_width/200).attr("stroke", color(0)).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
     circle2 = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", svg_width/200).attr("stroke", color(<?php echo $total_charts-1 ?>)).attr('stroke-width', svg_width/500).attr("fill", "#fff");
+  .attr("r", svg_width/200).attr("stroke", color(<?php echo ($typical_time_frame) ? $total_charts-1 : $total_charts ?>)).attr('stroke-width', svg_width/500).attr("fill", "#fff");
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)

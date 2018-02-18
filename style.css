@@ -299,6 +299,7 @@ svg {
 }
 .dropdown {
   position: absolute;
+  /*right: 5px;*/
   list-style: none;
   padding: 7px 20px;
   padding: .7vw 2vw;
