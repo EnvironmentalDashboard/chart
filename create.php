@@ -36,6 +36,9 @@ foreach ($buildings->fetchAll() as $building) {
   <h1><?php echo (isset($error)) ? "There are no data for meter {$error}, please select another" : 'This time series is not configured.' ?></h1>
   <p>At minimum, a time series needs 1 meter ID to chart. Please select a meter from the list below:</p>
   <form method="GET" action="<?php echo ($all_meters) ? 'save-chart.php' : 'index.php'; // if showing all meters need to make sure we're collecting data for all selected meters ?>">
+    <?php if ($all_meters) {
+      echo '<input type="text" name="label" placeholder="Optional label" class="control">';
+    } ?>
     <div class="select" style="width: 100%">
       <select aria-label="Select a meter" name="meter0">
         <?php echo $dropdown_html ?>

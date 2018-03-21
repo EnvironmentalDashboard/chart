@@ -1,7 +1,7 @@
 <?php
 require_once '../includes/db.php';
-$stmt = $db->prepare('INSERT INTO saved_charts (id) VALUES (NULL)');
-$stmt->execute();
+$stmt = $db->prepare('INSERT INTO saved_charts (label) VALUES (?)');
+$stmt->execute([(isset($_GET['label']) ? $_GET['label'] : '')]);
 $id = $db->lastInsertId();
 $redirect = [];
 $i = 0;
