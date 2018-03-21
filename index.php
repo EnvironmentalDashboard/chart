@@ -19,8 +19,6 @@ $total_charts = $charts; // the number of arrays in $values
 for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extract()'d
   $var_name = "meter{$i}";
   $$var_name = false;
-  $var_name = "fill{$i}";
-  $$var_name = false;
   $var_name = "color{$i}";
   $$var_name = false;
 }
@@ -53,11 +51,6 @@ if (isset($_GET['reset'])) {
   $stmt->execute([$now, $now, $meter0]);
   header('Location: https://environmentaldashboard.org'.substr($_SERVER['REQUEST_URI'], 0, -9));
   exit();
-  // echo "Meter data has been reset for meter {$meter0}; click <a href='".substr($_SERVER['REQUEST_URI'], 0, -9)."'>here</a> to reload the time series (you may have to way up to 20 additional seconds for the time series to render correctly). The collected 15 minute and hour resolution data are dumped below, respectively.<br>";
-  // var_dump($qh_json);
-  // echo "<br><br><br><br><br>";
-  // var_dump($hr_json);
-  // exit();
 }
 // fish or squirrel?
 $units0 = $meter->getUnits($meter0);
@@ -303,7 +296,7 @@ if ($title_img || $title_txt) {
     <?php
       foreach ($db->query('SELECT id, resource FROM meters WHERE scope = \'Whole Building\'
         AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
-        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
+        AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))
         ORDER BY units DESC') as $row) {
           echo "<a href='?";
           echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
@@ -312,7 +305,7 @@ if ($title_img || $title_txt) {
       $other_meters = '';
       foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
         AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
-        AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0)
+        AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs)
         OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
         $other_meters .= "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
       }

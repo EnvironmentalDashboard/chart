@@ -1,9 +1,14 @@
 <?php
 require_once '../includes/db.php';
+$all_meters = isset($_GET['all_meters']);
 $dropdown_html = '';
 $buildings = $db->query("SELECT * FROM buildings WHERE user_id = {$user_id} ORDER BY name ASC");
 foreach ($buildings->fetchAll() as $building) {
-  $stmt = $db->prepare('SELECT id, name FROM meters WHERE building_id = ? AND ((gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\')) ORDER BY name');
+  if ($all_meters) {
+    $stmt = $db->prepare('SELECT id, name FROM meters WHERE building_id = ? ORDER BY name');
+  } else {
+    $stmt = $db->prepare('SELECT id, name FROM meters WHERE building_id = ? AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\')) ORDER BY name');
+  }
   $stmt->execute(array($building['id']));
   $once = true;
   foreach($stmt->fetchAll() as $meter) {
@@ -30,7 +35,7 @@ foreach ($buildings->fetchAll() as $building) {
 <div style="width: 50%;min-width: 200px;margin: 0 auto;margin-top: 5%">
   <h1><?php echo (isset($error)) ? "There are no data for meter {$error}, please select another" : 'This time series is not configured.' ?></h1>
   <p>At minimum, a time series needs 1 meter ID to chart. Please select a meter from the list below:</p>
-  <form action="index.php" method="GET">
+  <form method="GET" action="<?php echo ($all_meters) ? 'save-chart.php' : 'index.php'; // if showing all meters need to make sure we're collecting data for all selected meters ?>">
     <div class="select" style="width: 100%">
       <select aria-label="Select a meter" name="meter0">
         <?php echo $dropdown_html ?>
