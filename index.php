@@ -14,20 +14,26 @@ foreach ($_GET as $key => $value) { // count the number of charts
     $charts++;
   }
 }
-$total_charts = $charts; // the number of arrays in $values
+if ($charts > 47) { // 47 = count($colors), so cutoff here (although 47 is a lot of meters, prob couldnt do this in the first place lol)
+  $charts = 47;
+}
 // each chart should be a parameter in the query string e.g. meter1=326 along optional other customizable variables
 for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extract()'d
   $var_name = "meter{$i}";
-  $$var_name = false;
-  $var_name = "color{$i}";
   $$var_name = false;
 }
 // other expected GET parameters
 $title_img = false;
 $title_txt = false;
-$start = 0;
+$start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
+$colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#7fc97f', '#beaed4', '#fdc086', '#ffff99', '#386cb0', '#f0027f', '#bf5b17', '#666666', '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3', '#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'];
+for ($i=0; $i < $charts; $i++) { 
+  if (isset($_GET["color{$i}"])) {
+    $colors[$i] = $_GET["color{$i}"];
+  }
+}
 require_once '../includes/db.php';
 require_once '../includes/class.Meter.php';
 require_once 'includes/normalize.php';
@@ -39,6 +45,8 @@ define('QUARTERHOUR', 900);
 define('HOUR', 3600);
 define('DAY', 86400);
 define('WEEK', 604800);
+define('HISTORICAL_CHART_INDEX', 1); // historical chart is 2nd (index 1) in charts
+define('TYPICAL_CHART_INDEX', 2);
 $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
@@ -125,121 +133,26 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
     }
   }
   $result = normalize($data, $times, $min, $max, NULL_DATA);
-  $values[$i] = $result[0];
-  $min = $result[1];
+  $values[] = $result[0];
+  $min = $result[1]; // normalize() will return its original argument (i.e. $min) if it is lower than anything encountered in $data
   $max = $result[2];
+  if ($i === 0) {
+    // get historical data for first meter
+    $data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
+    if (!empty($data)) {
+      $result = normalize($data, array_slice(range($double_time, $from, $increment), -$num_points), $min, $max, NULL_DATA);
+      $values[] = $result[0];
+      $min = $result[1];
+      $max = $result[2];
+      if ($time_frame === 'hour') { // the hour time frame doesnt have typical data, use previous hour as comparison 
+        $bands = $result[0];
+      }
+    }
+    // calculate the typical line
+    require 'includes/typical_line.php';
+  }
 }
 
-// calculate the typical line
-$typical_line = []; // formed by taking the median of each sub array value in $bands
-$typical_time_frame = ($time_frame === 'day' || $time_frame === 'week'); // there is only enough data to do the relative value calculation with these resolutions
-if ($typical_time_frame) {
-  // See if a configuration for the relative data exists in the db, and if not, have a default
-  $stmt = $db->prepare('SELECT relative_values.grouping FROM relative_values INNER JOIN meters ON meters.id = ? LIMIT 1');
-  $stmt->execute([$meter0]);
-  $json = $stmt->fetchColumn();
-  if (strlen($json) > 0) {
-    $json = json_decode($json, true);
-  } else {
-    $json = json_decode('[{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]', true);
-  }
-  $day_of_week = date('w') + 1;
-  foreach ($json as $grouping) {
-    if (in_array($day_of_week, $grouping['days'])) {
-      $days = $grouping['days']; // The array that has the current day in it
-      $npoints = (array_key_exists('npoints', $grouping) ? $grouping['npoints'] : 5); // you can only use npoints, not start
-      break;
-    }
-  }
-  if ($time_frame === 'day') {
-    $hash_arr = array_map(function($t) { return date('Gi', $t); }, $times); // 'Gi' = hours and minutes (mins padded with 0s)
-    $bands = array_fill_keys($hash_arr, array_fill(0, $npoints, null));
-    $counter = array_fill_keys($hash_arr, 0);
-    $stmt = $db->prepare( // get npoints days worth of data
-    'SELECT value, recorded FROM meter_data
-    WHERE meter_id = ? AND resolution = ?
-    AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ('.implode(',', $days).') AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . (intval($npoints)*24*4)); // to get npoints days of quarterhour data, npoints*24*4 = 4 points per hour, 24 per day
-    $stmt->execute([$meter0, 'quarterhour', $from]);
-    if ($stmt->rowCount() > 0) {
-      foreach ($stmt->fetchAll() as $row) {
-        $hash = date('Gi', $row['recorded']);
-        $bands[$hash][$counter[$hash]++] = (float) $row['value'];
-      }
-      foreach ($hash_arr as $time) {
-        $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
-        if (count($filtered) > 0) {
-          $median = median($filtered);
-          $typical_line[] = $median;
-          if ($median > $max) {
-            $max = $median;
-          }
-          if ($median < $min) {
-            $min = $median;
-          }
-          sort($filtered);
-          $bands[$time] = $filtered;
-        } else {
-          $typical_line[] = null;
-          $bands[$time] = [];
-        }
-      }
-      $typical_line = change_res($typical_line, $num_points);
-    }
-  } else { // week
-    $hash_arr = array_map(function($t) { return date('wG', $t); }, $times); // 'wG' = week, hours
-    $bands = array_fill_keys($hash_arr, array_fill(0, $npoints, null));
-    $counter = array_fill_keys($hash_arr, 0);
-    $stmt = $db->prepare( // https://stackoverflow.com/a/7786588/2624391
-    'SELECT value, recorded FROM meter_data
-    WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded < ?
-    ORDER BY recorded DESC LIMIT ' . ($npoints*24*7)); // to get npoints weeks of hour data, npoints*24*7 = 24 points per day, 7 days per week
-    $stmt->execute([$meter0, 'hour', $from]);
-    if ($stmt->rowCount() > 0) {
-      foreach ($stmt->fetchAll() as $row) {
-        $hash = date('wG', $row['recorded']);
-        $bands[$hash][$counter[$hash]++] = (float) $row['value'];
-      }
-      foreach ($hash_arr as $time) {
-        $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
-        if (count($filtered) > 0) {
-          $median = median($filtered);
-          $typical_line[] = $median;
-          if ($median > $max) {
-            $max = $median;
-          }
-          if ($median < $min) {
-            $min = $median;
-          }
-          sort($filtered);
-          $bands[$time] = $filtered;
-        } else {
-          $typical_line[] = null;
-          $bands[$time] = [];
-        }
-      }
-      $typical_line = change_res($typical_line, $num_points);
-    }
-  }
-  // $accumulation = [];
-  // foreach ($bands as $band) {
-  // }
-  if (count($typical_line) > 0) {
-    $values[] = $typical_line; // typical line is 2nd to last chart in $values
-    $total_charts++;
-  }
-}
-// get historical data for first meter
-$data = $meter->getDataFromTo($meter0, $double_time, $from, $res, NULL_DATA);
-if (!empty($data)) {
-  $result = normalize($data, array_slice(range($double_time, $from, $increment), -$num_points), $min, $max, NULL_DATA);
-  $values[$total_charts] = $result[0];
-  $min = $result[1];
-  $max = $result[2];
-  if ($time_frame === 'hour') {
-    $bands = $result[0];
-  }
-}
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
 }
@@ -346,11 +259,11 @@ var typical_shown = false;
 document.getElementById('typical-toggle').addEventListener('click', function(e) {
   e.preventDefault();
   if (typical_shown) {
-    document.getElementById('chart<?php echo $total_charts-1 ?>').style.display = 'none';
+    document.getElementById('chart1').style.display = 'none';
     document.getElementById('typical-toggle-text').innerHTML = 'Show typical';
     typical_shown = false;
   } else {
-    document.getElementById('chart<?php echo $total_charts-1 ?>').style.display = '';
+    document.getElementById('chart1').style.display = '';
     document.getElementById('typical-toggle-text').innerHTML = 'Hide typical';
     typical_shown = true;
   }
@@ -390,11 +303,11 @@ var historical_shown = false;
 document.getElementById('historical-toggle').addEventListener('click', function(e) {
   e.preventDefault();
   if (historical_shown) {
-    document.getElementById('chart<?php echo $total_charts ?>').style.display = 'none';
+    document.getElementById('chart1').style.display = 'none';
     document.getElementById('historical-toggle-text').innerHTML = 'Show previous <?php echo $time_frame ?>';
     historical_shown = false;
   } else {
-    document.getElementById('chart<?php echo $total_charts ?>').style.display = '';
+    document.getElementById('chart1').style.display = '';
     document.getElementById('historical-toggle-text').innerHTML = 'Hide previous <?php echo $time_frame ?>';
     historical_shown = true;
   }
@@ -406,6 +319,7 @@ var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {
     bands = <?php echo json_encode($bands) ?>,
     rv = 0,
     accum = 0,
+    colors = <?php echo json_encode($colors) ?>,
     svg_width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0),
     svg_height = svg_width / <?php echo (isset($_GET['height'])) ? $_GET['height'] : '2.75' ?>;
 for (var i = values[0].length-1; i >= 0; i--) { // calc real width
@@ -575,7 +489,6 @@ svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'r
 var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 // d3 scales
-var color = d3.scaleOrdinal(d3.schemeCategory10);
 var format = d3.format('.3s');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
@@ -603,24 +516,20 @@ values.forEach(function(curve, i) {
   if (i === 0) {
     current_path = path;
     current_path_len = current_path.node().getBBox().width;
-  } else if (i === <?php echo ($typical_time_frame) ? $total_charts-1 : $total_charts; ?>) {
+  } else if (i === <?php echo ($typical_time_frame) ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX; ?>) {
     compared_path = path;
   }
-  path.attr("fill", "none").attr("stroke", color(i))
+  path.attr("fill", "none").attr("stroke", colors[i])
     .attr("stroke-width", svg_width/700);
-  <?php echo ($typical_time_frame) ? 'if (i !== '.($total_charts-1).') {' : ''; ?>
+  <?php echo ($typical_time_frame) ? 'if (i !== '.TYPICAL_CHART_INDEX.') {' : ''; ?>
   var area = areaGenerator(curve);
   path_g.append("path")
     .attr("d", area)
-    .attr("fill", color(i))
+    .attr("fill", colors[i])
     .attr("opacity", "0.1");
   <?php
   echo ($typical_time_frame) ? '}' : '';
-  if ($typical_time_frame) { ?>
-  if (i === <?php echo $total_charts ?>) {
-    path_g.style('display', 'none');
-  }
-  <?php } ?>
+  ?>
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(<?php echo $xaxis_ticks; ?>, '<?php echo $xaxis_format ?>');
@@ -634,9 +543,9 @@ svg.append("g")
 document.getElementById('xaxis_ticks').childNodes[1].setAttribute('transform', 'translate(20,0)');
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", svg_width/200).attr("stroke", color(0)).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
+  .attr("r", svg_width/200).attr("stroke", colors[0]).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
     circle2 = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", svg_width/200).attr("stroke", color(<?php echo ($typical_time_frame) ? $total_charts-1 : $total_charts ?>)).attr('stroke-width', svg_width/500).attr("fill", "#fff");
+  .attr("r", svg_width/200).attr("stroke", colors[<?php echo ($typical_time_frame) ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX ?>]).attr('stroke-width', svg_width/500).attr("fill", "#fff");
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)
@@ -658,14 +567,14 @@ for ($i = 0; $i < $charts; $i++) {
   $stmt = $db->prepare('SELECT name FROM meters WHERE id = ?');
   $stmt->execute([$$var_name]);
   $legend[] = $stmt->fetchColumn();
+  if ($i === 0 && $typical_time_frame) {
+    $legend[] = "Previous {$time_frame}";
+    $legend[] = 'Typical use';
+  }
 }
-if ($typical_time_frame) {
-  $legend[] = 'Typical use';
-}
-$legend[] = "Previous {$time_frame}";
 echo json_encode($legend);
 ?>.forEach(function(name) {
-  svg.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', color(i++));
+  svg.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i++]);
   x += margin.top;
   var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name);
   x += el.node().getBBox().width + (svg_width/50);
