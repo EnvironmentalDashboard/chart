@@ -529,7 +529,9 @@ values.forEach(function(curve, i) {
     .attr("opacity", "0.1");
   <?php
   echo ($typical_time_frame) ? '}' : '';
-  ?>
+  if ($typical_time_frame) {
+    echo "if (i === 1) { path_g.style('display', 'none'); }\n";
+  } ?>
 });
 // create x and y axis
 var xaxis = d3.axisBottom(xScale).ticks(<?php echo $xaxis_ticks; ?>, '<?php echo $xaxis_format ?>');
