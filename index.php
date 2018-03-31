@@ -25,6 +25,7 @@ for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extra
 // other expected GET parameters
 $title_img = false;
 $title_txt = false;
+$gauge = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
@@ -60,7 +61,6 @@ if (isset($_GET['reset'])) {
   header('Location: https://environmentaldashboard.org'.substr($_SERVER['REQUEST_URI'], 0, -9));
   exit();
 }
-// fish or squirrel?
 $units0 = $meter->getUnits($meter0);
 $resource0 = $meter->getResourceType($meter0);
 if ($resource0 === 'Water') {
@@ -243,6 +243,10 @@ if ($title_img || $title_txt) {
       <stop offset="30%" style="stop-color:rgba(129, 176, 64, 0);stop-opacity:1" />
       <stop offset="80%" style="stop-color:#795548;stop-opacity:1" />
     </linearGradient>
+    <linearGradient id="gauge_grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F44336;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:1" />
+    </linearGradient>
   </defs>
   <rect id="background" />
 </svg>
@@ -335,13 +339,16 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     margin = {top: svg_width/60, right: charachter_width, bottom: svg_width/60, left: svg_width/35},
     chart_width = svg_width - margin.left - margin.right,
     chart_height = svg_height - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")"),
-    <?php if ($charachter === 'fish') {
-    echo "blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db'),\n";
-    // fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
-    echo "fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width),\n"; // +2/+20 are weird hacks; image not sized right
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    <?php
+    if (!$gauge) {
+      if ($charachter === 'fish') {
+      echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db');\n";
+      // fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
+      echo "var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width);\n"; // +2/+20 are weird hacks; image not sized right
+      } 
+        echo "var charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);"; // charachter to right of chart
     } ?>
-    charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height); // charachter to right of chart
  
 // menu above charachter
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
@@ -359,7 +366,9 @@ svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_hei
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 1).on('click', menu_click).attr('cursor', 'pointer');
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 2).on('click', menu_click).attr('cursor', 'pointer');
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 3).on('click', menu_click).attr('cursor', 'pointer');
-// kwh, co2, money animations
+
+
+// kwh, co2, money animations //
 var total_kw = 0,
     kw_count = 0;
 for (var i = values[0].length - 1; i >= 0; i--) {
@@ -418,7 +427,6 @@ function electric_anim() {
   }
 }
 var electricity_timer = null;
-
 
 // co2 animation
 co2_anim.append('image').attr('xlink:href', 'https://environmentaldashboard.org/cwd-files/img/power_plant.png').attr('width', charachter_width*.7).attr('x', margin.left + chart_width + 5).attr('y', '70%');
@@ -481,7 +489,19 @@ function tree_leaves() {
     }
   }
 }
-// end animations
+// end animations //
+
+
+// gauge for solar //
+<?php if ($gauge) { ?>
+svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/2.5).attr('fill', 'url(#gauge_grad)');
+svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/3).attr('fill', '#eee');
+svg.append('rect').attr('x', chart_width+margin.left).attr('y', chart_height/1.5).attr('width', charachter_width).attr('height', charachter_height/3).attr('fill', '#eee');
+var needle = svg.append('ellipse').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.8).attr('rx', charachter_width/100).attr('ry', charachter_height/7).attr('fill', 'black').attr('transform', 'translate(0) rotate(-90 '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
+svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/50).attr('fill', 'black');
+<?php } ?>
+// end gauge for solar //
+
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
 // svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
@@ -521,6 +541,7 @@ values.forEach(function(curve, i) {
   }
   path.attr("fill", "none").attr("stroke", colors[i])
     .attr("stroke-width", svg_width/700);
+
   <?php echo ($typical_time_frame) ? 'if (i !== '.TYPICAL_CHART_INDEX.') {' : ''; ?>
   var area = areaGenerator(curve);
   path_g.append("path")
@@ -528,9 +549,8 @@ values.forEach(function(curve, i) {
     .attr("fill", colors[i])
     .attr("opacity", "0.1");
   <?php
-  echo ($typical_time_frame) ? '}' : '';
   if ($typical_time_frame) {
-    echo "if (i === 1) { path_g.style('display', 'none'); }\n";
+    echo "} if (i === ".HISTORICAL_CHART_INDEX.") { path_g.style('display', 'none'); }\n";
   } ?>
 });
 // create x and y axis
@@ -590,16 +610,23 @@ function control_center() { // called every time the mouse is idle for 3s and at
   clearTimeout(timeout2);
   clearInterval(interval);
   setTimeout(function() {
-    <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');\n"; } ?>
-    var rand = Math.random();
-    if (rand > 0.93) {
-      control_center(); // wait another second
-    }
-    else if (rand > 0.6) {
-      play_data();
+    <?php
+    if ($gauge) {
+      echo "if (Math.random() > 0.7) { control_center(); } else { play_data(); }\n";
     } else {
-      play_movie();
-    }
+      if ($charachter === 'fish') {
+        echo "fishbg.style('display', 'none');\n"; } ?>
+        var rand = Math.random();
+        if (rand > 0.93) {
+          control_center(); // wait another second
+        }
+        else if (rand > 0.6) {
+          play_data();
+        } else {
+          play_movie();
+        } <?php
+      }
+    ?>
   }, 1000);
 }
 
@@ -622,7 +649,7 @@ function mousemoved() {
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
     set_accumulation(rv, elapsed);
-    animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
+    animate_to(rv);
     current_reading.text(d3.format('.2s')(current));
     var total_kw = 0,
         kw_count = 0;
@@ -699,7 +726,9 @@ function menu_click() {
 // dynamic charachter behaviour
 var frames = [],
     last_frame = 0;
-function animate_to(frame) {
+function animate_to(rv) {
+  <?php if (!$gauge) { ?>
+  var frame = <?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>));
   if (frames.length < 100) {
     if (frame > last_frame) {
       while (++last_frame < frame) {
@@ -713,12 +742,18 @@ function animate_to(frame) {
       frames.push(frame);
     }
   }
+  <?php } else { ?>
+    var scaled = convertRange(100 - rv, 0, 100, -90, 90);
+    needle.attr('transform', 'translate(0) rotate('+scaled+' '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')')
+  <?php } ?>
 }
+<?php if (!$gauge) { ?>
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
     charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
   }
 }, 8);
+<?php } ?>
 
 function play_data() {
   <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');"; } ?>
@@ -739,7 +774,7 @@ function play_data() {
         current = yScale.invert(p['y']);
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
-    animate_to(<?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>)));
+    animate_to(rv);
     if (current_state === 2) {
       co2_animation(index);
     }
@@ -841,7 +876,7 @@ function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   }
 }
 
-function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); } // how is this not built into js?
+function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
 
 function closestPoint(pathNode, point) {
   // https://stackoverflow.com/a/12541696/2624391 and http://bl.ocks.org/duopixel/3824661
