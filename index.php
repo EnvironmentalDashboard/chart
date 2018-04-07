@@ -727,8 +727,11 @@ function menu_click() {
 var frames = [],
     last_frame = 0;
 function animate_to(rv) {
-  <?php if (!$gauge) { ?>
-  var frame = <?php echo $number_of_frames ?> - Math.round(convertRange(rv, 0, 100, 0, <?php echo $number_of_frames ?>));
+  <?php if (!$gauge) {
+    echo "var frame = {$number_of_frames} - Math.round(convertRange(rv, 0, 100, 0, {$number_of_frames}));\n";
+  } else {
+    echo "var frame = convertRange(100 - rv, 0, 100, -90, 90);\n";
+  } ?>
   if (frames.length < 100) {
     if (frame > last_frame) {
       while (++last_frame < frame) {
@@ -742,18 +745,16 @@ function animate_to(rv) {
       frames.push(frame);
     }
   }
-  <?php } else { ?>
-    var scaled = convertRange(100 - rv, 0, 100, -90, 90);
-    needle.attr('transform', 'translate(0) rotate('+scaled+' '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')')
-  <?php } ?>
 }
-<?php if (!$gauge) { ?>
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
+    <?php if (!$gauge) { ?>
     charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
+    <?php } else { ?>
+    needle.attr('transform', 'translate(0) rotate('+frames.shift()+' '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
+    <?php } ?>
   }
-}, 8);
-<?php } ?>
+}, <?php echo ($gauge) ? 3 : 8; ?>);
 
 function play_data() {
   <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');"; } ?>
