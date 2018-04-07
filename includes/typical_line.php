@@ -38,6 +38,7 @@ if ($typical_time_frame) {
       foreach ($hash_arr as $time) {
         $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
         if (count($filtered) > 0) {
+          sort($filtered);
           $median = median($filtered);
           $typical_line[] = $median;
           if ($median > $max) {
@@ -46,7 +47,6 @@ if ($typical_time_frame) {
           if ($median < $min) {
             $min = $median;
           }
-          sort($filtered);
           $bands[$time] = $filtered;
         } else {
           $typical_line[] = null;
@@ -72,6 +72,7 @@ if ($typical_time_frame) {
       foreach ($hash_arr as $time) {
         $filtered = array_values(array_filter($bands[$time], function($e) {return $e!==null;} ));
         if (count($filtered) > 0) {
+          sort($filtered);
           $median = median($filtered);
           $typical_line[] = $median;
           if ($median > $max) {
@@ -80,7 +81,6 @@ if ($typical_time_frame) {
           if ($median < $min) {
             $min = $median;
           }
-          sort($filtered);
           $bands[$time] = $filtered;
         } else {
           $typical_line[] = null;

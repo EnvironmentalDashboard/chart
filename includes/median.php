@@ -1,4 +1,5 @@
 <?php
+// ASSUMES $arr IS SORTED
 function median($arr) {
   if (empty($arr)) {
     return 0;
