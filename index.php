@@ -166,7 +166,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=<?php echo @time() ?>">
+  <link rel="stylesheet" href="style.css?v=1">
   <title>Time Series</title>
 </head>
 <body><?php
@@ -201,9 +201,12 @@ if ($title_img || $title_txt) {
     </ul>
   </div>
   <div>
-    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn">Hour</a>
-    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'day'])); ?>" class="btn">Day</a>
-    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'week'])); ?>" class="btn">Week</a>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'hour'])); ?>" class="btn <?php 
+    echo ($time_frame === 'hour') ? 'active' : ''; ?>">Hour</a>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'day'])); ?>" class="btn <?php 
+    echo ($time_frame === 'day') ? 'active' : ''; ?>">Day</a>
+    <a href="?<?php echo http_build_query(array_replace($qs, ['time_frame' => 'week'])); ?>" class="btn <?php 
+    echo ($time_frame === 'week') ? 'active' : ''; ?>">Week</a>
   </div>
   <div>
     <?php
@@ -213,14 +216,23 @@ if ($title_img || $title_txt) {
         ORDER BY units DESC') as $row) {
           echo "<a href='?";
           echo http_build_query(array_replace($qs, ['meter0' => $row['id']]));
-          echo "' class='btn'>{$row['resource']}</a> \n";
+          echo "' class='btn";
+          if ($meter0 === $row['id']) {
+            echo ' active';
+          }
+          echo "'>{$row['resource']}</a> \n";
         }
       $other_meters = '';
       foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
         AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
         AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs)
         OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\'))') as $related_meter) {
-        $other_meters .= "<a href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
+        if ($meter0 === $related_meter['id']) {
+          $style = "style='background:#3498db;color:#fff'";
+        } else {
+          $style = "";
+        }
+        $other_meters .= "<a {$style} href='?".http_build_query(array_replace($qs, ['meter0' => $related_meter['id']]))."'><li>{$related_meter['name']}</li></a>";
       }
       if ($other_meters !== '') {
         echo '<a href="#" id="other-meters" class="btn">More meters &#9662;</a>';
