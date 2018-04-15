@@ -79,6 +79,7 @@ switch ($time_frame) {
     $res = 'live';
     $increment = MIN;
     $xaxis_format = '%-I:%M %p';
+    $time_format = '%-I:%M %p';
     $pct_thru = ($now - $from) / HOUR;
     $double_time = $from - HOUR;
     $xaxis_ticks = 5;
@@ -94,6 +95,7 @@ switch ($time_frame) {
     $res = 'hour';
     $increment = HOUR;
     $xaxis_format = '%A';
+    $time_format = '%A %-I:%M %p';
     $pct_thru = ($now - $from) / WEEK;
     $double_time = $from - WEEK;
     $xaxis_ticks = 7;
@@ -104,6 +106,7 @@ switch ($time_frame) {
     $res = 'quarterhour';
     $increment = QUARTERHOUR;
     $xaxis_format = '%-I %p';
+    $time_format = '%-I:%M %p';
     $pct_thru = ($now - $from) / DAY;
     $double_time = $from - DAY;
     $xaxis_ticks = 13;
@@ -275,8 +278,8 @@ if ($title_img || $title_txt) {
       <stop offset="80%" style="stop-color:#795548;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="gauge_grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#F44336;stop-opacity:1" />
+      <stop offset="20%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="80%" style="stop-color:#F44336;stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect id="background" />
@@ -533,8 +536,10 @@ gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy',
 gauge.append('rect').attr('x', chart_width+margin.left).attr('y', chart_height/1.5).attr('width', charachter_width).attr('height', charachter_height/2.5).attr('fill', '#90A4AE');
 var needle = gauge.append('ellipse').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.8).attr('rx', charachter_width/100).attr('ry', charachter_height/7).attr('fill', '#263238').attr('transform', 'translate(0) rotate(-90 '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
 gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/50).attr('fill', '#263238');
-gauge.append('text').text('LOW').attr('x', (chart_width+margin.left)*1.03).attr('y', chart_height/1.4);
-gauge.append('text').text('HIGH').attr('x', svg_width/1.04).attr('y', chart_height/1.4);
+gauge.append('text').text('PRODUCING').attr('x', (chart_width+margin.left)*1.02).attr('y', chart_height/1.4);
+gauge.append('text').text('CONSUMING').attr('x', svg_width/1.075).attr('y', chart_height/1.4);
+var producing = gauge.append('text').attr('x', (chart_width+margin.left)*1.02).attr('y', chart_height/1.3);
+var consuming = gauge.append('text').attr('x', svg_width/1.01).attr('y', chart_height/1.3).attr('text-anchor', 'end');
 <?php } ?>
 // end gauge for solar //
 
@@ -546,6 +551,7 @@ var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 // d3 scales
 var format = d3.format('.3s');
+var formatTime = d3.timeFormat('<?php echo $time_format ?>');
 var xScale = d3.scaleTime().domain([times[0], times[times.length-1]]).range([0, chart_width]);
 var yScale = d3.scaleLinear().domain([<?php echo $min ?>, <?php echo $max ?>]).range([chart_height, 0]); // fixed domain for each chart that is the global min/max
 var pct_thru = d3.scaleLinear().domain([0, 1]).range([0, values0length]).clamp(true); // do orb_values.length-1 instead of values0length?
@@ -642,6 +648,8 @@ echo json_encode($legend);
   var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name);
   x += el.node().getBBox().width + (svg_width/50);
 });
+// draw time box
+var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top/1.7).attr('text-anchor', 'end');
 
 var timeout = null, // fires when the mouse is idle for 3s; calls control_center()
     timeout2 = null, // fires when a movie has finished playing; calls play_data()
@@ -695,6 +703,7 @@ function mousemoved() {
     var current2 = yScale.invert(p2['y']);
     rv = compare_meter1_meter2(current, current2);
     <?php } ?>
+    set_time(elapsed);
     animate_to(rv);
     current_reading.text(d3.format('.2s')(current));
     var total_kw = 0,
@@ -832,6 +841,7 @@ function play_data() {
     var current2 = yScale.invert(p2['y']);
     rv = compare_meter1_meter2(current, current2);
     <?php } ?>
+    set_time(elapsed);
     animate_to(rv);
     if (current_state === 2) {
       co2_animation(index);
@@ -843,7 +853,7 @@ function play_data() {
     total_kw += values[0][Math.floor((i/end_i)*values0length)];
     i++;
     accum_text.text(accumulation((xScale.invert(p['x']) - times[0])/1000, total_kw/i, current_state));
-    if (i > end_i) {
+    if (i >= end_i) {
       control_center();
     }
   }, (1/end_i)*<?php echo 30000 * $pct_thru ?>); // (1/end_i)*7000 will make the loop go for 7 seconds
@@ -911,7 +921,13 @@ function set_relative_value(typical, current) {
 }
 
 function compare_meter1_meter2(current, current2) {
+  producing.text(format(current) + ' ' + '<?php echo $units0 ?>');
+  consuming.text(format(current2) + ' ' + '<?php echo ($compare && isset($meter1)) ? $meter->getUnits($meter1) : '' ?>');
   return current - current2;
+}
+
+function set_time(time) {
+  current_time.text(formatTime(time));
 }
 
 var last_time = times[0];
