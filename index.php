@@ -26,6 +26,7 @@ for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extra
 $title_img = false;
 $title_txt = false;
 $gauge = false;
+$compare = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
@@ -47,7 +48,7 @@ define('HOUR', 3600);
 define('DAY', 86400);
 define('WEEK', 604800);
 define('HISTORICAL_CHART_INDEX', 1); // historical chart is 2nd (index 1) in charts
-define('TYPICAL_CHART_INDEX', 2);
+define('TYPICAL_CHART_INDEX', 2); // points to the typical chart or the second meter when $compare is true
 $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
@@ -114,7 +115,7 @@ $values = [];
 $max = PHP_INT_MIN; // global max/min of all charts to determine how to scale y axis
 $min = PHP_INT_MAX;
 // get data from db for each chart and format so that it matches $times
-for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus a historical chart and typical chart (typical only on day/week res)
+for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus a historical chart and typical chart (typical turned off when $compare is on; only on day/week res regardless of $compare)
   $var_name = "meter{$i}";
   if ($$var_name === false) {
     continue;
@@ -148,11 +149,29 @@ for ($i = 0; $i < $charts; $i++) { // we will draw $charts number of charts plus
         $bands = $result[0];
       }
     }
-    // calculate the typical line
-    require 'includes/typical_line.php';
+    if (!$compare || !isset($meter1)) {
+      // calculate the typical line
+      require 'includes/typical_line.php';
+    } else {
+      $typical_time_frame = false;
+      $bands = []; // TODO more elegant
+    }
+  }
+  if ($i === 1 && $compare && isset($meter1)) {
+    $bands = $values[2]; // second meter i.e. $meter1
+    $biggest_diff = PHP_INT_MIN;
+    $smallest_diff = PHP_INT_MAX;
+    for ($j=0; $j < $num_points; $j++) { 
+      $diff = $values[0][$j] - $values[2][$j];
+      if ($diff > $biggest_diff) {
+        $biggest_diff = $diff;
+      }
+      if ($diff < $smallest_diff) {
+        $smallest_diff = $diff;
+      }
+    }
   }
 }
-
 if ($min > 0) { // && it's a resource that starts from 0, but do this later
   $min = 0;
 }
@@ -256,8 +275,8 @@ if ($title_img || $title_txt) {
       <stop offset="80%" style="stop-color:#795548;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="gauge_grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#F44336;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F44336;stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect id="background" />
@@ -506,11 +525,16 @@ function tree_leaves() {
 
 // gauge for solar //
 <?php if ($gauge) { ?>
-svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/2.5).attr('fill', 'url(#gauge_grad)');
-svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/3).attr('fill', '#eee');
-svg.append('rect').attr('x', chart_width+margin.left).attr('y', chart_height/1.5).attr('width', charachter_width).attr('height', charachter_height/3).attr('fill', '#eee');
-var needle = svg.append('ellipse').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.8).attr('rx', charachter_width/100).attr('ry', charachter_height/7).attr('fill', 'black').attr('transform', 'translate(0) rotate(-90 '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
-svg.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/50).attr('fill', 'black');
+  var gauge = svg.append('g').attr('id', 'gauge');
+gauge.append('rect').attr('width', charachter_width).attr('height', charachter_height).attr('x', chart_width+margin.left).attr('y', svg_height-charachter_height-margin.bottom).attr('fill', '#90A4AE');
+gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/2.3).attr('fill', '#B0BEC5');
+gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/2.5).attr('fill', 'url(#gauge_grad)');
+gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/3).attr('fill', '#B0BEC5');
+gauge.append('rect').attr('x', chart_width+margin.left).attr('y', chart_height/1.5).attr('width', charachter_width).attr('height', charachter_height/2.5).attr('fill', '#90A4AE');
+var needle = gauge.append('ellipse').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.8).attr('rx', charachter_width/100).attr('ry', charachter_height/7).attr('fill', '#263238').attr('transform', 'translate(0) rotate(-90 '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
+gauge.append('circle').attr('cx', chart_width+(charachter_width/1.5)).attr('cy', chart_height/1.5).attr('r', charachter_width/50).attr('fill', '#263238');
+gauge.append('text').text('LOW').attr('x', (chart_width+margin.left)*1.03).attr('y', chart_height/1.4);
+gauge.append('text').text('HIGH').attr('x', svg_width/1.04).attr('y', chart_height/1.4);
 <?php } ?>
 // end gauge for solar //
 
@@ -548,7 +572,7 @@ values.forEach(function(curve, i) {
   if (i === 0) {
     current_path = path;
     current_path_len = current_path.node().getBBox().width;
-  } else if (i === <?php echo ($typical_time_frame) ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX; ?>) {
+  } else if (i === <?php echo ($typical_time_frame || $compare) ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX; // typical_chart_index points to the second meter when $compare is true ?>) {
     compared_path = path;
   }
   path.attr("fill", "none").attr("stroke", colors[i])
@@ -562,7 +586,10 @@ values.forEach(function(curve, i) {
     .attr("opacity", "0.1");
   <?php
   if ($typical_time_frame) {
-    echo "} if (i === ".HISTORICAL_CHART_INDEX.") { path_g.style('display', 'none'); }\n";
+    echo "}\n";
+  } 
+  if ($time_frame !== 'hour') {
+    echo "if (i === ".HISTORICAL_CHART_INDEX.") { path_g.style('display', 'none'); }\n";
   } ?>
 });
 // create x and y axis
@@ -579,7 +606,7 @@ document.getElementById('xaxis_ticks').childNodes[1].setAttribute('transform', '
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .attr("r", svg_width/200).attr("stroke", colors[0]).attr('stroke-width', svg_width/500).attr("fill", "#fff"),
     circle2 = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")
-  .attr("r", svg_width/200).attr("stroke", colors[<?php echo ($typical_time_frame) ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX ?>]).attr('stroke-width', svg_width/500).attr("fill", "#fff");
+  .attr("r", svg_width/200).attr("stroke", colors[<?php echo ($time_frame !== 'hour') ? TYPICAL_CHART_INDEX : HISTORICAL_CHART_INDEX ?>]).attr('stroke-width', svg_width/500).attr("fill", "#fff");
 svg.append("rect") // circle moves when mouse is over this rect
   .attr("width", chart_width)
   .attr("height", chart_height)
@@ -601,9 +628,11 @@ for ($i = 0; $i < $charts; $i++) {
   $stmt = $db->prepare('SELECT name FROM meters WHERE id = ?');
   $stmt->execute([$$var_name]);
   $legend[] = $stmt->fetchColumn();
-  if ($i === 0 && $typical_time_frame) {
+  if ($i === 0) {
     $legend[] = "Previous {$time_frame}";
-    $legend[] = 'Typical use';
+    if ($typical_time_frame) {
+      $legend[] = 'Typical use';
+    }
   }
 }
 echo json_encode($legend);
@@ -658,9 +687,14 @@ function mousemoved() {
     var index = Math.round(pct_thru(frac));
     var elapsed = xScale.invert(p['x']),
         current = yScale.invert(p['y']);
+    <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
     set_accumulation(rv, elapsed);
+    <?php } else { ?>
+    var current2 = yScale.invert(p2['y']);
+    rv = compare_meter1_meter2(current, current2);
+    <?php } ?>
     animate_to(rv);
     current_reading.text(d3.format('.2s')(current));
     var total_kw = 0,
@@ -708,6 +742,7 @@ function menu_click() {
     grass.style('display', 'none');
     icon_rect.style('fill', '#3498db');
     icon.style('fill', '#3498db');
+    <?php if ($gauge) { echo "gauge.style('display', '');\n"; } ?>
   } else if (current_state === 1) {
     accum_units.text('<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>');
     kwh_anim.style('display', 'initial');
@@ -717,6 +752,7 @@ function menu_click() {
     kwh_rect.style('fill', '#3498db');
     kwh_text.style('fill', '#3498db');
     electricity_timer = setInterval(electric_anim, (100-rv)/5);
+    <?php if ($gauge) { echo "gauge.style('display', 'none');\n"; } ?>
   } else if (current_state === 2) {
     accum_units.text('Pounds of CO2 today');
     kwh_anim.style('display', 'none');
@@ -725,6 +761,7 @@ function menu_click() {
     grass.style('display', 'initial');
     co2_rect.style('fill', '#3498db');
     co2_text.style('fill', '#3498db');
+    <?php if ($gauge) { echo "gauge.style('display', 'none');\n"; } ?>
   } else if (current_state === 3) {
     accum_units.text('Dollars spent today');
     kwh_anim.style('display', 'none');
@@ -733,16 +770,19 @@ function menu_click() {
     grass.style('display', 'initial');
     $rect.style('fill', '#3498db');
     $text.style('fill', '#3498db');
+    <?php if ($gauge) { echo "gauge.style('display', 'none');\n"; } ?>
   }
 }
 // dynamic charachter behaviour
 var frames = [],
     last_frame = 0;
 function animate_to(rv) {
-  <?php if (!$gauge) {
+  <?php if ($compare) {
+    echo "var frame = convertRange(rv, {$smallest_diff}, {$biggest_diff}, 90, -90);\n";
+  } else if (!$gauge) {
     echo "var frame = {$number_of_frames} - Math.round(convertRange(rv, 0, 100, 0, {$number_of_frames}));\n";
   } else {
-    echo "var frame = convertRange(100 - rv, 0, 100, -90, 90);\n";
+    echo "var frame = convertRange(rv, 0, 100, -90, 90);\n";
   } ?>
   if (frames.length < 100) {
     if (frame > last_frame) {
@@ -785,8 +825,13 @@ function play_data() {
     var index = Math.round(pct_thru(i/end_i));
     var elapsed = xScale.invert(p['x']),
         current = yScale.invert(p['y']);
+    <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
+    <?php } else { ?>
+    var current2 = yScale.invert(p2['y']);
+    rv = compare_meter1_meter2(current, current2);
+    <?php } ?>
     animate_to(rv);
     if (current_state === 2) {
       co2_animation(index);
@@ -865,6 +910,10 @@ function set_relative_value(typical, current) {
   rv = (copy.indexOf(current) / (count)) * 100;
 }
 
+function compare_meter1_meter2(current, current2) {
+  return current - current2;
+}
+
 var last_time = times[0];
 // var powerScale = d3.scalePow().exponent(0.5).domain([0, 10000]).range([0, 100]);
 function set_accumulation(rv, time) {
@@ -872,6 +921,7 @@ function set_accumulation(rv, time) {
   // console.log(time-last_time);
   accum += (diff*rv)/10000;
   last_time = time;
+  // console.log(time.toLocaleString()); // the current time
   // console.log(accum);
   // console.log(powerScale(accum));
 }
