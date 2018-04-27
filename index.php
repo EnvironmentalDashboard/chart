@@ -188,7 +188,7 @@ parse_str($_SERVER['QUERY_STRING'], $qs);
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=5">
   <title>Time Series</title>
 </head>
 <body><?php
