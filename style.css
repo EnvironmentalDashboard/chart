@@ -296,7 +296,8 @@ body {
   border-radius: 2px;
   background: #3498db;
   font-size: 1.4vw;
-  border-bottom: 3px solid #0165A8;
+  border-bottom: .2vw solid #0165A8;
+  margin-right: .2vw;
 }
 .dropdown {
   position: absolute;
@@ -327,7 +328,6 @@ body {
   stroke-width: 0;
   fill: #37474F;
   font-weight: 500;
-  font-size: 1vmax;
 }
 .bolder {
   font-weight: 700;

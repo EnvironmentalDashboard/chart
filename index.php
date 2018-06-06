@@ -546,7 +546,7 @@ var consuming = gauge.append('text').attr('x', svg_width/1.01).attr('y', chart_h
 
 svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
 // svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
-svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'rotate(-90)').attr('font-size', '1.3vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
+svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'rotate(-90)').attr('font-size', '1.2vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
 var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 // d3 scales
@@ -619,11 +619,11 @@ svg.append("rect") // circle moves when mouse is over this rect
   .attr('id', 'hover-space')
   .attr("transform", "translate("+margin.left+"," + margin.top + ")")
   .on("mousemove", mousemoved);
-var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
-var accum_text = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700);
+var current_reading = svg.append('text').attr('id', 'current-reading').attr('x', svg_width - charachter_width + 5).attr('y', menu_height/4).text('0').style('font-weight', 700).style('font-size', '2vmax');
+var accum_text = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5).attr('y', menu_height/4).text('0').style('font-weight', 700).style('font-size', '2vmax');
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.3).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.3).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>").style('font-size', '1.25vw').attr('class', 'bolder');
-svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text('<?php echo ($time_frame === 'day') ? 'today' : $time_frame;  ?>').attr('class', 'bolder').attr('font-size', '1.25vw');
+svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text('<?php echo ($time_frame === 'day') ? 'today' : "this {$time_frame}";  ?>').attr('class', 'bolder').attr('font-size', '1.25vw');
 //draw legend
 var x = margin.left,
     i = 0;
@@ -645,11 +645,11 @@ echo json_encode($legend);
 ?>.forEach(function(name) {
   svg.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i++]);
   x += margin.top;
-  var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name);
+  var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name).style('font-size', '1vw');
   x += el.node().getBBox().width + (svg_width/50);
 });
 // draw time box
-var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top/1.7).attr('text-anchor', 'end');
+var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top/1.7).attr('text-anchor', 'end').style('font-size', '1vw');
 
 var timeout = null, // fires when the mouse is idle for 3s; calls control_center()
     timeout2 = null, // fires when a movie has finished playing; calls play_data()
