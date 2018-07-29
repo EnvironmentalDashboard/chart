@@ -313,7 +313,6 @@ body {
 .dropdown li {
   padding: 8px 16px;
   color: #333;
-  text-align: center;
 }
 .dropdown li:hover {
   background: #3498db;

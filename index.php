@@ -211,13 +211,13 @@ if ($title_img || $title_txt) {
   <div>
     <a href="#" id="chart-overlay" class="btn">Graph overlay &#9662;</a>
     <ul class="dropdown" style="display: none;" id="chart-dropdown">
-      <a href="#" id="historical-toggle"><li id="historical-toggle-text">Show previous <?php echo $time_frame ?></li></a>
-      <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-show="1"><li id="typical-toggle-text">Hide typical</li></a>' : ''; ?>
+      <a href="#" id="historical-toggle" data-shown='false' data-show='<?php echo HISTORICAL_CHART_INDEX ?>'><li id="historical-toggle-text">Show previous <?php echo $time_frame ?></li></a>
+      <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-shown="true" data-show="'.TYPICAL_CHART_INDEX.'"><li id="typical-toggle-text">Hide typical</li></a>' : ''; ?>
       <?php for ($i = 1; $i < $charts; $i++) {
         $v = "meter{$i}";
         if ($$v !== false) {
           $chart_name = $meter->getName($$v);
-          echo "<a href='#' data-show='{$i}'><li>{$chart_name}</li></a>";
+          echo "<a href='#' data-shown='true' data-show='".($i+2)."'><li>Hide {$chart_name}</li></a>";
         }
       } ?>
     </ul>
@@ -292,21 +292,26 @@ if ($title_img || $title_txt) {
 'use strict';
 console.log(<?php echo json_encode($log); ?>);
 // buttons outside of time series <svg>
-<?php if ($typical_time_frame) { ?>
-var typical_shown = false;
-document.getElementById('typical-toggle').addEventListener('click', function(e) {
-  e.preventDefault();
-  if (typical_shown) {
-    document.getElementById('chart1').style.display = 'none';
-    document.getElementById('typical-toggle-text').innerHTML = 'Show typical';
-    typical_shown = false;
-  } else {
-    document.getElementById('chart1').style.display = '';
-    document.getElementById('typical-toggle-text').innerHTML = 'Hide typical';
-    typical_shown = true;
-  }
-});
-<?php } ?>
+var overlay_buttons = document.querySelectorAll("[data-show]");
+for (var i = overlay_buttons.length - 1; i >= 0; i--) {
+  overlay_buttons[i].addEventListener('click', function(e) {
+    e.preventDefault();
+    var selected = this.getAttribute('data-show');
+    var current_text = this.childNodes[0].innerHTML;
+    var rest_of_text = current_text.split(' ');
+    rest_of_text.shift();
+    rest_of_text = rest_of_text.join(' ');
+    if (this.getAttribute('data-shown') === 'true') {
+      document.getElementById('chart' + selected).style.display = 'none';
+      this.childNodes[0].innerHTML = 'Show ' + rest_of_text;
+      this.setAttribute('data-shown', 'false');
+    } else {
+      document.getElementById('chart' + selected).style.display = '';
+      this.childNodes[0].innerHTML = 'Hide ' + rest_of_text;
+      this.setAttribute('data-shown', 'true');
+    }
+  });
+}
 var dropdown_menu = document.getElementById('chart-dropdown'),
     dropdown_menu_shown = false;
 document.getElementById('chart-overlay').addEventListener('click', function(e) {
@@ -337,19 +342,6 @@ document.getElementById('other-meters').addEventListener('click', function(e) {
   }
 });
 <?php } ?>
-var historical_shown = false;
-document.getElementById('historical-toggle').addEventListener('click', function(e) {
-  e.preventDefault();
-  if (historical_shown) {
-    document.getElementById('chart1').style.display = 'none';
-    document.getElementById('historical-toggle-text').innerHTML = 'Show previous <?php echo $time_frame ?>';
-    historical_shown = false;
-  } else {
-    document.getElementById('chart1').style.display = '';
-    document.getElementById('historical-toggle-text').innerHTML = 'Hide previous <?php echo $time_frame ?>';
-    historical_shown = true;
-  }
-});
 // set vars
 var times = <?php echo str_replace('"', '', json_encode(array_map(function($t) {return 'new Date('.($t*1000).')';}, $times))) ?>,
     values = <?php echo json_encode($values) ?>,
