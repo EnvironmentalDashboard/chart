@@ -212,7 +212,7 @@ if ($title_img || $title_txt) {
     <a href="#" id="chart-overlay" class="btn">Graph overlay &#9662;</a>
     <ul class="dropdown" style="display: none;" id="chart-dropdown">
       <a href="#" id="historical-toggle" data-shown='false' data-show='<?php echo HISTORICAL_CHART_INDEX ?>'><li id="historical-toggle-text">Show previous <?php echo $time_frame ?></li></a>
-      <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-shown="true" data-show="'.TYPICAL_CHART_INDEX.'"><li id="typical-toggle-text">Hide typical</li></a>' : ''; ?>
+      <?php echo ($typical_time_frame) ? '<a href="#" id="typical-toggle" data-shown="true" data-show="'.TYPICAL_CHART_INDEX.'"><li id="typical-toggle-text">Hide typical use</li></a>' : ''; ?>
       <?php for ($i = 1; $i < $charts; $i++) {
         $v = "meter{$i}";
         if ($$v !== false) {
@@ -291,6 +291,22 @@ if ($title_img || $title_txt) {
 <script>
 'use strict';
 console.log(<?php echo json_encode($log); ?>);
+var legend = <?php
+$legend = [];
+for ($i = 0; $i < $charts; $i++) {
+  $var_name = "meter{$i}";
+  $stmt = $db->prepare('SELECT name FROM meters WHERE id = ?');
+  $stmt->execute([$$var_name]);
+  $legend[$stmt->fetchColumn()] = true;
+  if ($i === 0) {
+    $legend["Previous {$time_frame}"] = false;
+    if ($typical_time_frame) {
+      $legend['Typical use'] = true;
+    }
+  }
+}
+echo json_encode($legend);
+?>;
 // buttons outside of time series <svg>
 var overlay_buttons = document.querySelectorAll("[data-show]");
 for (var i = overlay_buttons.length - 1; i >= 0; i--) {
@@ -301,14 +317,26 @@ for (var i = overlay_buttons.length - 1; i >= 0; i--) {
     var rest_of_text = current_text.split(' ');
     rest_of_text.shift();
     rest_of_text = rest_of_text.join(' ');
+    var index = null;
+    for (var name in legend) {
+      var indexOf = name.toLowerCase().indexOf(rest_of_text.toLowerCase());
+      if (indexOf !== -1) {
+        index = name;
+        break;
+      }
+    }
     if (this.getAttribute('data-shown') === 'true') {
       document.getElementById('chart' + selected).style.display = 'none';
       this.childNodes[0].innerHTML = 'Show ' + rest_of_text;
       this.setAttribute('data-shown', 'false');
+      legend[name] = false;
+      draw_legend(legend);
     } else {
       document.getElementById('chart' + selected).style.display = '';
       this.childNodes[0].innerHTML = 'Hide ' + rest_of_text;
       this.setAttribute('data-shown', 'true');
+      legend[name] = true;
+      draw_legend(legend);
     }
   });
 }
@@ -616,30 +644,26 @@ var accum_text = svg.append('text').attr('id', 'accum').attr('x', svg_width - 5)
 svg.append('text').attr('x', svg_width - charachter_width + 5).attr('y', menu_height*1.3).attr('text-anchor', 'start').attr('alignment-baseline', 'hanging').text("<?php echo $units0 ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 var accum_units = svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.3).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text("<?php echo ($charachter === 'squirrel') ? 'Kilowatt-hours' : 'Gallons so far'; ?>").style('font-size', '1.25vw').attr('class', 'bolder');
 svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('text-anchor', 'end').attr('alignment-baseline', 'hanging').text('<?php echo ($time_frame === 'day') ? 'today' : "this {$time_frame}";  ?>').attr('class', 'bolder').attr('font-size', '1.25vw');
-//draw legend
-var x = margin.left,
-    i = 0;
-<?php
-$legend = [];
-for ($i = 0; $i < $charts; $i++) {
-  $var_name = "meter{$i}";
-  $stmt = $db->prepare('SELECT name FROM meters WHERE id = ?');
-  $stmt->execute([$$var_name]);
-  $legend[] = $stmt->fetchColumn();
-  if ($i === 0) {
-    $legend[] = "Previous {$time_frame}";
-    if ($typical_time_frame) {
-      $legend[] = 'Typical use';
+
+draw_legend(legend);
+function draw_legend(legend) {
+  var x = margin.left,
+      i = 0;
+  var old_legend = document.querySelectorAll('[data-legend]');
+  for (var j = old_legend.length - 1; j >= 0; j--) {
+    old_legend[j].remove();
+  }
+  for (var name in legend) {
+    if (legend[name]) {
+      var legend_g = svg.append('g').attr('data-legend', name);
+      legend_g.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i]);
+      x += margin.top;
+      var el = legend_g.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name).style('font-size', '1vw');
+      x += el.node().getBBox().width + (svg_width/50); 
     }
+    i++;
   }
 }
-echo json_encode($legend);
-?>.forEach(function(name) {
-  svg.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i++]);
-  x += margin.top;
-  var el = svg.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name).style('font-size', '1vw');
-  x += el.node().getBBox().width + (svg_width/50);
-});
 // draw time box
 var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top/1.7).attr('text-anchor', 'end').style('font-size', '1vw');
 
@@ -982,6 +1006,7 @@ function convertRange(val, old_min, old_max, new_min, new_max) {
   }
   return (((new_max - new_min) * (val - old_min)) / (old_max - old_min)) + new_min;
 }
+
 </script>
 </body>
 </html>
