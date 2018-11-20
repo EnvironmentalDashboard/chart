@@ -76,6 +76,7 @@ switch ($time_frame) {
   case 'hour':
     $from = strtotime(date('Y-m-d H') . ':00:00'); // Start of hour
     $to = strtotime(date('Y-m-d H') . ":59:59") + 1; // End of the hour
+    set_custom_timerange($from, $to);
     $res = 'live';
     $increment = MIN;
     $xaxis_format = '%-I:%M %p';
@@ -92,6 +93,7 @@ switch ($time_frame) {
       $from = strtotime('last sunday'); // Start of the week
       $to = strtotime('next sunday')-1; // End of the week
     }
+    set_custom_timerange($from, $to);
     $res = 'hour';
     $increment = HOUR;
     $xaxis_format = '%A';
@@ -103,6 +105,7 @@ switch ($time_frame) {
   default://case 'day':
     $from = strtotime(date('Y-m-d') . " 00:00:00"); // Start of day
     $to = strtotime(date('Y-m-d') . " 23:59:59") + 1; // End of day
+    set_custom_timerange($from, $to);
     $res = 'quarterhour';
     $increment = QUARTERHOUR;
     $xaxis_format = '%-I %p';
@@ -182,6 +185,15 @@ if ($start !== 0) {
   $min = $start;
 }
 parse_str($_SERVER['QUERY_STRING'], $qs);
+
+function set_custom_timerange(&$start, &$end) {
+  $strtotime = (isset($_GET['start'])) ? strtotime($_GET['start']) : false;
+  if ($strtotime) {
+    $start = $strtotime;
+    $strtotime = (isset($_GET['end'])) ? strtotime($_GET['end']) : false;
+    $end = ($strtotime) ? $strtotime : $start + DAY;
+  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
