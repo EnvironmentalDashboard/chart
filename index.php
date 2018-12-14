@@ -27,6 +27,7 @@ $title_img = false;
 $title_txt = false;
 $gauge = false;
 $compare = false;
+$inverted = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
@@ -945,7 +946,7 @@ function set_relative_value(typical, current) {
   var copy = typical.slice();
   copy.push(current);
   copy.sort(function(a,b) {return a-b;});
-  rv = (copy.indexOf(current) / (count)) * 100;
+  rv = <?php echo ($inverted) ? '100 -' : '' ?> ((copy.indexOf(current) / (count)) * 100);
 }
 
 function compare_meter1_meter2(current, current2) {
