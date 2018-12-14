@@ -202,7 +202,7 @@ function set_custom_timerange(&$start, &$end) {
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <title>Time Series</title>
 </head>
 <body><?php
@@ -661,7 +661,7 @@ svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('tex
 
 draw_legend(legend);
 function draw_legend(legend) {
-  var x = margin.left,
+  var x = margin.left * 1.1,
       i = 0;
   var old_legend = document.querySelectorAll('[data-legend]');
   for (var j = old_legend.length - 1; j >= 0; j--) {
@@ -670,16 +670,16 @@ function draw_legend(legend) {
   for (var name in legend) {
     if (legend[name]) {
       var legend_g = svg.append('g').attr('data-legend', name);
-      legend_g.append('rect').attr('y', 0).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i]);
-      x += margin.top;
-      var el = legend_g.append('text').attr('y', margin.top / 1.7).attr('x', x).text(name).style('font-size', '1vw');
+      legend_g.append('rect').attr('y', margin.top / 2.7).attr('x', x).attr('height', margin.top - (svg_width/200)).attr('width', margin.top - (svg_width/200)).attr('fill', colors[i]);
+      x += margin.top + 5;
+      var el = legend_g.append('text').attr('y', margin.top * 1.1).attr('x', x).text(name).style('font-size', '1.6vw').style('font-weight', '900');
       x += el.node().getBBox().width + (svg_width/50); 
     }
     i++;
   }
 }
 // draw time box
-var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top/1.7).attr('text-anchor', 'end').style('font-size', '1vw');
+var current_time = svg.append('text').attr('x', (chart_width+margin.left)*0.99).attr('y', margin.top).attr('text-anchor', 'end').style('font-size', '1.5vw');
 
 var timeout = null, // fires when the mouse is idle for 3s; calls control_center()
     timeout2 = null, // fires when a movie has finished playing; calls play_data()
