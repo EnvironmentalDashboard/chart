@@ -30,6 +30,7 @@ $compare = false;
 $inverted = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
+$cleveland = true;
 extract($_GET, EXTR_IF_EXISTS); // imports GET array into the current symbol table (i.e. makes each entry of GET a variable) if the variable already exists
 $colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#7fc97f', '#beaed4', '#fdc086', '#ffff99', '#386cb0', '#f0027f', '#bf5b17', '#666666', '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3', '#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9', '#bc80bd', '#ccebc5', '#ffed6f'];
 for ($i=0; $i < $charts; $i++) { 
@@ -414,9 +415,9 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
       // fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
       echo "var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width);\n"; // +2/+20 are weird hacks; image not sized right
       } 
-        echo "var charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);"; // charachter to right of chart
+      echo "svg.append('image').attr('xlink:href', 'images/Renewables_Background.svg').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height);"; // new background
+      echo "var charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);"; // charachter to right of chart
     } ?>
- 
 // menu above charachter
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0; // see menu_click()
@@ -838,9 +839,13 @@ function animate_to(rv) {
 }
 setInterval(function() { // outside is best for performance
   if (frames.length > 0) {
-    <?php if (!$gauge) { ?>
+    <?php if (!$gauge) {
+      if ($cleveland) {
+      ?>
+    charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames2/frame_"+frames.shift()+".svg");
+  <?php } else { ?>
     charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
-    <?php } else { ?>
+    <?php } } else { ?>
     needle.attr('transform', 'translate(0) rotate('+frames.shift()+' '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
     <?php } ?>
   }
