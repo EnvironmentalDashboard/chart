@@ -22,6 +22,7 @@ if ($typical_time_frame) {
   }
   if ($time_frame === 'day') {
     $hash_arr = array_map(function($t) { return date('Gi', $t); }, $times); // 'Gi' = hours and minutes (mins padded with 0s)
+    $hash_arr[96] = "2400"; // change the last entry from "000" to "2400"
     $bands = array_fill_keys($hash_arr, array_fill(0, $npoints, null));
     $counter = array_fill_keys($hash_arr, 0);
     $stmt = $db->prepare( // get npoints days worth of data
