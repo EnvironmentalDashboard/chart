@@ -25,8 +25,8 @@ for ($i = 0; $i < $charts; $i++) { // whitelist/define the variables to be extra
 // other expected GET parameters
 $title_img = false;
 $title_txt = false;
-$gauge = false;
-$compare = false;
+$gauge = false; // use a speedometer gauge instead the squirrel/fish
+$compare = false; // if true a second meter will be used instead of the typical line for calculations
 $inverted = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
@@ -696,10 +696,10 @@ function control_center() { // called every time the mouse is idle for 3s and at
       if ($charachter === 'fish') {
         echo "fishbg.style('display', 'none');\n"; } ?>
         var rand = Math.random();
-        if (rand > 0.93) {
+        if (rand > 0.95) {
           control_center(); // wait another second
         }
-        else if (rand > 0.6) {
+        else if (rand > 0.65) {
           play_data();
         } else {
           play_movie();
@@ -826,11 +826,15 @@ function animate_to(rv) {
   if (frames.length < 100) {
     if (frame > last_frame) {
       while (++last_frame < frame) {
-        frames.push(last_frame);
+        if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames // eventually this extra check should be taken out ?>) {
+          frames.push(last_frame);
+        }
       }
     } else if (frame < last_frame) {
       while (--last_frame > frame) {
-        frames.push(last_frame);
+        if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames ?>) {
+          frames.push(last_frame);
+        }
       }
     } else {
       frames.push(frame);
@@ -947,6 +951,9 @@ function typical_data(time) {
 
 function set_relative_value(typical, current) {
   var count = typical.length;
+  if (count === 0) {
+    return;
+  }
   // console.log(typical, current); // this is important
   var copy = typical.slice();
   copy.push(current);
@@ -955,8 +962,10 @@ function set_relative_value(typical, current) {
 }
 
 function compare_meter1_meter2(current, current2) {
+  <?php if ($gauge) { ?>
   producing.text(format(current) + ' ' + '<?php echo $units0 ?>');
   consuming.text(format(current2) + ' ' + '<?php echo ($compare && isset($meter1)) ? $meter->getUnits($meter1) : '' ?>');
+  <?php } ?>
   return current - current2;
 }
 
