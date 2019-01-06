@@ -202,7 +202,7 @@ function set_custom_timerange(&$start, &$end) {
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
   <title>Time Series</title>
 </head>
 <body><?php
@@ -578,7 +578,7 @@ var consuming = gauge.append('text').attr('x', svg_width/1.01).attr('y', chart_h
 // end gauge for solar //
 
 
-svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
+// svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
 // svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
 svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'rotate(-90)').attr('font-size', '1.2vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
 var bg = d3.select('#background'); // style defined in style.css
