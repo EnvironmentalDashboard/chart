@@ -724,7 +724,7 @@ function mousemoved() {
     circle2.attr('cx', p2['x']).attr('cy', p2['y']);
     var index = Math.round(pct_thru(frac));
     var elapsed = xScale.invert(p['x']),
-        current = yScale.invert(p['y']);
+        current = yScale.invert(p['y']).toFixed(2);
     <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
@@ -871,7 +871,7 @@ function play_data() {
     current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var index = Math.round(pct_thru(i/end_i));
     var elapsed = xScale.invert(p['x']),
-        current = yScale.invert(p['y']);
+        current = yScale.invert(p['y']).toFixed(2);
     <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
