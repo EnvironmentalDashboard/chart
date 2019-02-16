@@ -724,7 +724,7 @@ function mousemoved() {
     circle2.attr('cx', p2['x']).attr('cy', p2['y']);
     var index = Math.round(pct_thru(frac));
     var elapsed = xScale.invert(p['x']),
-        current = yScale.invert(p['y']).toFixed(2);
+        current = Math.abs(yScale.invert(p['y']).toFixed(2)); // todo: why are we sometimes getting negatives when the data never is?
     <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
@@ -735,7 +735,11 @@ function mousemoved() {
     <?php } ?>
     set_time(elapsed);
     animate_to(rv);
-    current_reading.text(d3.format('.2s')(current));
+    if (current >= 10) {
+      current_reading.text(d3.format('.2s')(current));
+    } else {
+      current_reading.text(current);
+    }
     var total_kw = 0,
         kw_count = 0;
     for (var i = 0; i <= index; i++) {
@@ -879,10 +883,15 @@ function play_data() {
     }
     circle.attr("cx", p['x']).attr("cy", p['y']);
     circle2.attr("cx", p2['x']).attr("cy", p2['y']);
-    current_reading.text(d3.format('.2s')(yScale.invert(p['y'])));
     var index = Math.round(pct_thru(i/end_i));
     var elapsed = xScale.invert(p['x']),
-        current = yScale.invert(p['y']).toFixed(2);
+        current = Math.abs(yScale.invert(p['y']).toFixed(2));
+    if (current >= 10) {
+        current_reading.text(d3.format('.2s')(current));
+    } else {
+        current_reading.text(current);
+    }
+
     <?php if (!$compare) { ?>
     var typical = typical_data(elapsed);
     set_relative_value(typical, current);
