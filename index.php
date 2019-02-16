@@ -841,19 +841,30 @@ function animate_to(rv) {
     }
   }
 }
-setInterval(function() { // outside is best for performance
-  if (frames.length > 0) {
-    <?php if (!$gauge) {
-      if ($cleveland) {
-      ?>
-    charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames2/frame_"+frames.shift()+".svg");
-  <?php } else { ?>
-    charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/<?php echo ($charachter === 'squirrel') ? 'main' : 'second'; ?>_frames/frame_"+frames.shift()+".gif");
-    <?php } } else { ?>
-    needle.attr('transform', 'translate(0) rotate('+frames.shift()+' '+(chart_width+(charachter_width/1.5))+' '+(chart_height/1.5)+')');
-    <?php } ?>
+
+function refresh() {
+  <?php
+  echo 'if (frames.length > 0) {';
+  if (!$gauge) {
+    if ($cleveland) {
+      echo 'charachter.attr("xlink:href", "images/' . (($charachter === 'squirrel') ? 'main' : 'second') . '_frames2/frame_"+frames.shift()+".svg"); ';
+    } else {
+      echo 'charachter.attr("xlink:href", "images/' . (($charachter === 'squirrel') ? 'main' : 'second') . '_frames/frame_"+frames.shift()+".gif"); ';
+    }
+    echo '} else {
+      setTimeout(refresh, 200);
+    }';
+  } else {
+    echo 'needle.attr("transform", \'translate(0) rotate(\'+frames.shift()+\' \'+(chart_width+(charachter_width/1.5))+\' \'+(chart_height/1.5)+\')\'); }';
   }
-}, <?php echo ($gauge) ? 3 : 8; ?>);
+  ?>
+}
+<?php if ($gauge) { ?>
+  setInterval(refresh, 200);
+<?php } else { ?>
+  charachter.on('load', refresh);
+  refresh();
+<?php } ?>
 
 function play_data() {
   <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');"; } ?>
@@ -911,11 +922,11 @@ function play_movie() {
       console.log(split);
       var len = split[1];
       var name = split[0];
-      charachter.attr("xlink:href", "https://environmentaldashboard.org/chart/images/"+name+".gif");
+      charachter.attr("xlink:href", "images/"+name+".gif");
       <?php if ($charachter === 'fish') { ?>
       var fishbg_name = split[2];
       if (fishbg_name != 'none') {
-        fishbg.attr("xlink:href", "https://environmentaldashboard.org/chart/images/"+fishbg_name+".gif").style('display', 'initial');
+        fishbg.attr("xlink:href", "images/"+fishbg_name+".gif").style('display', 'initial');
       }
       <?php } ?>
       timeout2 = setTimeout(play_data, len);
