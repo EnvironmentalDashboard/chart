@@ -580,7 +580,7 @@ var consuming = gauge.append('text').attr('x', svg_width/1.01).attr('y', chart_h
 
 // svg.append('rect').attr('y', 0).attr('x', svg_width - charachter_width).attr('width', '3px').attr('height', svg_height - margin.bottom).attr('fill', 'url(#shadow)'); // shadow between charachter and chart
 // svg.append('rect').attr('y', svg_height-margin.bottom-3).attr('x', margin.left).attr('width', chart_width).attr('height', 3).attr('fill', 'url(#shadow2)');
-svg.append('text').attr('x', -svg_height + 20).attr('y', 3).attr('transform', 'rotate(-90)').attr('font-size', '1.2vw').attr('font-color', '#333').attr('alignment-baseline', 'hanging').text('<?php echo $units0 ?>'); // units on left yaxis
+var units = svg.append('text').attr('x', 5).attr('y', 5).attr('font-size', '1.2vw').attr('font-color', '#333').text('<?php echo $units0 ?>').call(wrap, 100); // units on left yaxis
 var bg = d3.select('#background'); // style defined in style.css
 bg.attr('width', chart_width).attr('height', chart_height).attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 // d3 scales
@@ -661,7 +661,7 @@ svg.append('text').attr('x', svg_width - 5).attr('y', menu_height*1.8).attr('tex
 
 draw_legend(legend);
 function draw_legend(legend) {
-  var x = margin.left * 1.1,
+  var x = units.node().getBBox().width + 30,
       i = 0;
   var old_legend = document.querySelectorAll('[data-legend]');
   for (var j = old_legend.length - 1; j >= 0; j--) {
@@ -1016,6 +1016,41 @@ function accumulation(time_sofar, avg_kw, current_state) { // how calculate kwh
   } else if (current_state === 3) {
     return '$' + format(kwh*0.11); // average cost of kwh http://www.npr.org/sections/money/2011/10/27/141766341/the-price-of-electricity-in-your-state
   }
+}
+
+function wrap(text, width) {
+  text.each(function () {
+    var text = d3.select(this),
+        words = text.text().split(/\s+/).reverse(),
+        word,
+        line = [],
+        lineNumber = 0,
+        lineHeight = 1.1, // ems
+        x = text.attr("x"),
+        y = text.attr("y"),
+        dy = 0, //parseFloat(text.attr("dy")),
+        tspan = text.text(null)
+                    .append("tspan")
+                    .attr("x", x)
+                    .attr("y", y)
+                    .attr('alignment-baseline', 'hanging')
+                    .attr("dy", dy + "em");
+      while (word = words.pop()) {
+        line.push(word);
+        tspan.text(line.join(" "));
+        if (tspan.node().getComputedTextLength() > width) {
+          line.pop();
+          tspan.text(line.join(" "));
+          line = [word];
+          tspan = text.append("tspan")
+                      .attr("x", x)
+                      .attr("y", y)
+                      .attr('alignment-baseline', 'hanging')
+                      .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                      .text(word);
+        }
+      }
+  });
 }
 
 function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
