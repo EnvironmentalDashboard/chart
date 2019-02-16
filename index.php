@@ -410,12 +410,12 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
     <?php
     if (!$gauge) {
+      echo "svg.append('image').attr('xlink:href', 'images/Renewables_Background.svg').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height);"; // new background
       if ($charachter === 'fish') {
-      echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db');\n";
+      echo "var blue_anim_bg = svg.append('rect').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height).attr('fill', '#3498db').attr('id', 'lookhere');\n";
       // fishbg is the real fish animation, the gif put in charachter is a background of the ocean floor
       echo "var fishbg = svg.append('image').style('display', 'none').attr('x', margin.left + chart_width + 2).attr('y', svg_height - margin.bottom - charachter_height + 20).attr('width', charachter_width);\n"; // +2/+20 are weird hacks; image not sized right
       } 
-      echo "svg.append('image').attr('xlink:href', 'images/Renewables_Background.svg').attr('x', margin.left + chart_width).attr('y', svg_height - margin.bottom - charachter_height).attr('width', charachter_width).attr('height', charachter_height);"; // new background
       echo "var charachter = svg.append('image').attr('x', svg_width - charachter_width).attr('y', svg_height-charachter_height-margin.bottom).attr('width', charachter_width).attr('height', charachter_height);"; // charachter to right of chart
     } ?>
 // menu above charachter
