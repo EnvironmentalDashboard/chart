@@ -202,7 +202,7 @@ function set_custom_timerange(&$start, &$end) {
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
   <title>Time Series</title>
 </head>
 <body><?php
@@ -640,7 +640,7 @@ svg.append("g")
   .attr("transform", "translate("+(margin.left)+"," + (chart_height+margin.top-5) + ")").attr('id', 'xaxis_ticks');
 svg.append("g")
   .call(yaxis)
-  .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks').attr('font-size', margin.bottom);
+  .attr("transform", "translate("+margin.left+","+margin.top+")").attr('id', 'yaxis_ticks');
 document.getElementById('xaxis_ticks').childNodes[1].setAttribute('transform', 'translate(20,0)');
 // indicator ball
 var circle = svg.append("circle").attr("cx", -100).attr("cy", -100).attr("transform", "translate("+margin.left+"," + margin.top + ")")

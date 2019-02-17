@@ -339,7 +339,7 @@ body {
   display: none;
 }
 #xaxis_ticks text {
-  font-size: 1.3vmax;
+  font-size: 1.1vmax;
 }
 #yaxis_ticks text {
   font-size: 1.1vmax;
