@@ -28,6 +28,7 @@ $title_txt = false;
 $gauge = false; // use a speedometer gauge instead the squirrel/fish
 $compare = false; // if true a second meter will be used instead of the typical line for calculations
 $inverted = false;
+$hide_navbar = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 $cleveland = false;
@@ -220,7 +221,8 @@ if ($title_img || $title_txt) {
   }
   echo '</div>';
 }
-?>
+$other_meters = '';
+if (!$hide_navbar) { ?>
 <div class="Grid" style="display:flex;justify-content: space-between;margin: 1.3vw 0px 0px 0px">
   <div>
     <a href="#" id="chart-overlay" class="btn">Graph overlay &#9662;</a>
@@ -258,7 +260,6 @@ if ($title_img || $title_txt) {
           }
           echo "'>{$row['resource']}</a> \n";
         }
-      $other_meters = '';
       foreach ($db->query('SELECT id, name FROM meters WHERE scope != \'Whole Building\'
         AND building_id IN (SELECT building_id FROM meters WHERE id = '.intval($meter0).')
         AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs)
@@ -277,6 +278,7 @@ if ($title_img || $title_txt) {
     ?>
   </div>
 </div>
+<?php } // end $hide_navbar ?>
 <svg id="svg">
   <defs>
     <linearGradient id="shadow">
@@ -322,6 +324,7 @@ for ($i = 0; $i < $charts; $i++) {
 echo json_encode($legend);
 ?>;
 // buttons outside of time series <svg>
+<?php if (!$hide_navbar) { ?>
 var overlay_buttons = document.querySelectorAll("[data-show]");
 for (var i = overlay_buttons.length - 1; i >= 0; i--) {
   overlay_buttons[i].addEventListener('click', function(e) {
@@ -368,7 +371,9 @@ document.getElementById('chart-overlay').addEventListener('click', function(e) {
     this.innerHTML = 'Graph overlay &#9652;';
   }
 });
-<?php if ($other_meters !== '') { ?>
+<?php
+}
+if ($other_meters !== '') { ?>
 var dropdown_menu2 = document.getElementById('meters-dropdown'),
     dropdown_menu2_shown = false;
 document.getElementById('other-meters').addEventListener('click', function(e) {
