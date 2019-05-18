@@ -870,9 +870,15 @@ function fastForwardFrames(frames) {
   return ret;
 }
 
+var then = Date.now();
+var now, elapsed;
+var fpsInterval = 1000 / <?php echo ($charachter === 'squirrel') ? 60 : 30; // 30 fps for fish, 60 for squirrel ?>;
 function refresh() {
+  requestAnimationFrame(refresh);
+  now = Date.now();
+  elapsed = now - then;
   <?php
-  echo 'if (frames.length > 0) {';
+  echo 'if (elapsed > fpsInterval && frames.length > 0) { then = now - (elapsed % fpsInterval);';
   if (!$gauge) {
     if ($cleveland) {
       echo 'charachter.attr("xlink:href", "images/' . (($charachter === 'squirrel') ? 'main' : 'second') . '_frames2/frame_"+frames.shift()+".svg"); ';
@@ -884,13 +890,8 @@ function refresh() {
     echo 'needle.attr("transform", \'translate(0) rotate(\'+frames.shift()+\' \'+(chart_width+(charachter_width/1.5))+\' \'+(chart_height/1.5)+\')\'); }';
   }
   ?>
-  requestAnimationFrame(refresh);
 }
-<?php if ($gauge) { ?>
-  requestAnimationFrame(refresh);
-<?php } else { ?>
-  requestAnimationFrame(refresh);
-<?php } ?>
+requestAnimationFrame(refresh);
 
 function play_data() {
   <?php if ($charachter === 'fish') { echo "fishbg.style('display', 'none');"; } ?>
