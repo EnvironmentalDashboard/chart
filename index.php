@@ -29,6 +29,7 @@ $gauge = false; // use a speedometer gauge instead the squirrel/fish
 $compare = false; // if true a second meter will be used instead of the typical line for calculations
 $inverted = false;
 $hide_navbar = false;
+$hide_menu = false;
 $start = 0; // if set by user, $min will be set to this
 $time_frame = 'day';
 $cleveland = false;
@@ -426,6 +427,7 @@ var svg = d3.select('#svg').attr('height', svg_height).attr('width', svg_width).
 // menu above charachter
 var menu_height = (svg_height-charachter_height-margin.bottom-margin.top)/2.5,
     current_state = 0; // see menu_click()
+<?php if (!$hide_menu) { ?>
 var icon_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - charachter_width).attr('width', charachter_width*.23).attr('height', '1%').style('fill', '#3498db');
 var kwh_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '1%');
 var co2_rect = svg.append('rect').attr('class', 'menu-option').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.01)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '1%');
@@ -439,7 +441,7 @@ svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_hei
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.74)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 1).on('click', menu_click).attr('cursor', 'pointer');
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.48)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 2).on('click', menu_click).attr('cursor', 'pointer');
 svg.append('rect').attr('y', svg_height-charachter_height-margin.bottom-(svg_height*.06)).attr('x', svg_width - (charachter_width*.22)).attr('width', charachter_width*.23).attr('height', '6%').attr('fill', 'transparent').attr('data-option', 3).on('click', menu_click).attr('cursor', 'pointer');
-
+<?php } ?>
 
 // kwh, co2, money animations //
 var total_kw = 0,
@@ -563,7 +565,6 @@ function tree_leaves() {
   }
 }
 // end animations //
-
 
 // gauge for solar //
 <?php if ($gauge) { ?>
@@ -764,7 +765,7 @@ function mousemoved() {
     }
   }
 }
-
+<?php if (!$hide_menu) { ?>
 function menu_click() {
   if (current_state === 0) { // current_state 0 is the dynamic charachter behaviour
     icon_rect.style('fill', '#37474F');
@@ -821,6 +822,7 @@ function menu_click() {
     <?php if ($gauge) { echo "gauge.style('display', 'none');\n"; } ?>
   }
 }
+<?php } ?>
 // dynamic charachter behaviour
 var frames = [],
     last_frame = 0;
