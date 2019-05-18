@@ -834,23 +834,40 @@ function animate_to(rv) {
   } else {
     echo "var frame = convertRange(rv, 0, 100, -90, 90);\n";
   } ?>
-  if (frames.length < 100) {
-    if (frame > last_frame) {
-      while (++last_frame < frame) {
-        if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames // eventually this extra check should be taken out ?>) {
-          frames.push(last_frame);
-        }
+  if (frames.length > 50) { // animation is lagging
+    frames = fastForwardFrames(frames);
+  }
+  if (frame > last_frame) {
+    while (++last_frame < frame) {
+      if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames // eventually this extra check should be taken out ?>) {
+        frames.push(last_frame);
       }
-    } else if (frame < last_frame) {
-      while (--last_frame > frame) {
-        if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames ?>) {
-          frames.push(last_frame);
-        }
+    }
+  } else if (frame < last_frame) {
+    while (--last_frame > frame) {
+      if (last_frame >= 0 && last_frame <= <?php echo $number_of_frames ?>) {
+        frames.push(last_frame);
       }
-    } else {
-      frames.push(frame);
+    }
+  } else {
+    frames.push(frame);
+  }
+}
+
+function fastForwardFrames(frames) {
+  var ret = [];
+  var start = 0;
+  var end = frames.length - 1;
+  if (frames[start] > frames[end]) {
+    for (var i = frames[start]; i >= frames[end]; i--) {
+      ret.push(i);
+    }
+  } else {
+    for (var i = frames[start]; i <= frames[end]; i++) {
+      ret.push(i);
     }
   }
+  return ret;
 }
 
 function refresh() {
@@ -862,19 +879,17 @@ function refresh() {
     } else {
       echo 'charachter.attr("xlink:href", "images/' . (($charachter === 'squirrel') ? 'main' : 'second') . '_frames/frame_"+frames.shift()+".gif"); ';
     }
-    echo '} else {
-      setTimeout(refresh, 200);
-    }';
+    echo '}';
   } else {
     echo 'needle.attr("transform", \'translate(0) rotate(\'+frames.shift()+\' \'+(chart_width+(charachter_width/1.5))+\' \'+(chart_height/1.5)+\')\'); }';
   }
   ?>
+  requestAnimationFrame(refresh);
 }
 <?php if ($gauge) { ?>
-  setInterval(refresh, 200);
+  requestAnimationFrame(refresh);
 <?php } else { ?>
-  charachter.on('load', refresh);
-  refresh();
+  requestAnimationFrame(refresh);
 <?php } ?>
 
 function play_data() {
