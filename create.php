@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once 'includes/db.php';
 $all_meters = isset($_GET['all_meters']); // set this to true to create time series for meters we dont (yet) collect data for
 $dropdown_html = '';
 $buildings = $db->query("SELECT * FROM buildings WHERE user_id = {$user_id} ORDER BY name ASC");

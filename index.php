@@ -40,8 +40,8 @@ for ($i=0; $i < $charts; $i++) {
     $colors[$i] = $_GET["color{$i}"];
   }
 }
-require_once '../includes/db.php';
-require_once '../includes/class.Meter.php';
+require_once 'includes/db.php';
+require_once 'includes/class.Meter.php';
 require_once 'includes/normalize.php';
 require_once 'includes/median.php';
 require_once 'includes/change_res.php';
@@ -57,7 +57,7 @@ $log = [];
 $meter = new Meter($db); // has methods to get data from db easily
 $now = time();
 if (isset($_GET['reset'])) {
-  require_once '../includes/class.BuildingOS.php';
+  require_once 'includes/class.BuildingOS.php';
   $bos = new BuildingOS($db, $db->query("SELECT id FROM api WHERE user_id = {$user_id} LIMIT 1")->fetchColumn());
   $bos->resetMeter($meter0, 'quarterhour');
   $bos->resetMeter($meter0, 'hour');
