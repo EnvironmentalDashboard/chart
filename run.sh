@@ -13,4 +13,4 @@ then
   fi
 fi
 
-docker run -dit --name chart -p 8000:80 --restart always -e "MYSQL_HOST=159.89.232.129" -e "MYSQL_DB=oberlin_environmentaldashboard" -e "MYSQL_USER=$user" -e "MYSQL_PASS=$pass" chart
+docker run -dit --name chart -p 8000:80 --restart always -e "MYSQL_HOST=159.89.232.129" -e "MYSQL_DB=oberlin_environmentaldashboard" -e "MYSQL_USER=$user" -e "MYSQL_PASS=$pass" -e "MYSQL_PORT=$port" chart

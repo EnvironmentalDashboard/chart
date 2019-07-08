@@ -3,7 +3,8 @@ $host = getenv('MYSQL_HOST');
 $dbname = getenv('MYSQL_DB');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
-$dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8;port=3306', $host, $dbname);
+$port = getenv('MYSQL_PORT');
+$dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8;port=%s', $host, $dbname, $port);
 try {
     $db = new PDO($dsn, $user, $pass);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
