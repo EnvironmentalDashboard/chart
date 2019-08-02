@@ -7,6 +7,8 @@ if ($count < 1) {
   $keyword = 'Point';
 } else if ($count < 3) {
   $keyword = 'Emo';
+} else if ($count < 4) {
+  $keyword = 'Story';
 } else {
   $keyword = null;
 }
