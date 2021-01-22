@@ -63,7 +63,14 @@ if (isset($_GET['reset'])) {
   $bos->resetMeter($meter0, 'hour');
   $stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = ?, hour_last_updated = ? WHERE id = ?');
   $stmt->execute([$now, $now, $meter0]);
-  header('Location: https://environmentaldashboard.org'.substr($_SERVER['REQUEST_URI'], 0, -9));
+
+  $url = $_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']; // complete url
+  $parts = parse_url($url);
+  parse_str($parts['query'], $query); // grab the query part
+  unset($query['reset']);
+  $dest_query = http_build_query($query); // rebuild new query
+  $dest_url=(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").'://'.$parts['path'].'?'.$dest_query; // add query to host
+  header("Location: ".$dest_url); // reload page
   exit();
 }
 $units0 = $meter->getUnits($meter0);
